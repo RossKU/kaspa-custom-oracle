@@ -1,25 +1,26 @@
 import { useState, useEffect, useRef } from 'react'
 import { BinancePriceMonitor } from './services/binance'
-import { MexcWebSocketTest } from './services/mexc'
+import { MexcPriceMonitor, type MexcPriceData } from './services/mexc'
 import type { PriceData } from './types/binance'
 import './App.css'
 
 function App() {
-  const [priceData, setPriceData] = useState<PriceData | null>(null)
+  const [binanceData, setBinanceData] = useState<PriceData | null>(null)
+  const [mexcData, setMexcData] = useState<MexcPriceData | null>(null)
   const [isConnecting, setIsConnecting] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [lastUpdateTime, setLastUpdateTime] = useState<string>('')
-  const monitorRef = useRef<BinancePriceMonitor | null>(null)
-  const mexcTestRef = useRef<MexcWebSocketTest | null>(null)
+  const binanceMonitorRef = useRef<BinancePriceMonitor | null>(null)
+  const mexcMonitorRef = useRef<MexcPriceMonitor | null>(null)
 
   // Binance WebSocket
   useEffect(() => {
     const monitor = new BinancePriceMonitor()
-    monitorRef.current = monitor
+    binanceMonitorRef.current = monitor
 
     monitor.connect(
       (data) => {
-        setPriceData(data)
+        setBinanceData(data)
         setLastUpdateTime(new Date().toLocaleTimeString())
         setIsConnecting(false)
         setError(null)
@@ -32,21 +33,28 @@ function App() {
 
     return () => {
       monitor.disconnect()
-      monitorRef.current = null
+      binanceMonitorRef.current = null
     }
   }, [])
 
-  // MEXC WebSocket Test
+  // MEXC WebSocket
   useEffect(() => {
-    console.log('[App] Starting MEXC connection test...')
-    const mexcTest = new MexcWebSocketTest()
-    mexcTestRef.current = mexcTest
+    const monitor = new MexcPriceMonitor()
+    mexcMonitorRef.current = monitor
 
-    mexcTest.connect()
+    monitor.connect(
+      (data) => {
+        setMexcData(data)
+        setLastUpdateTime(new Date().toLocaleTimeString())
+      },
+      (errorMsg) => {
+        console.error('[App] MEXC error:', errorMsg)
+      }
+    )
 
     return () => {
-      mexcTest.disconnect()
-      mexcTestRef.current = null
+      monitor.disconnect()
+      mexcMonitorRef.current = null
     }
   }, [])
 
@@ -69,7 +77,7 @@ function App() {
           {isConnecting && <p className="loading-message">Connecting to exchanges...</p>}
           {error && <p className="error-message">{error}</p>}
 
-          {priceData && (
+          {(binanceData || mexcData) && (
             <table className="price-table">
               <thead>
                 <tr>
@@ -81,13 +89,24 @@ function App() {
                 </tr>
               </thead>
               <tbody>
-                <tr>
-                  <td>Binance</td>
-                  <td className="type-futures">F</td>
-                  <td className="price">${priceData.price.toFixed(7)}</td>
-                  <td className="bid">${priceData.bestBid.toFixed(7)}</td>
-                  <td className="ask">${priceData.bestAsk.toFixed(7)}</td>
-                </tr>
+                {binanceData && (
+                  <tr>
+                    <td>Binance</td>
+                    <td className="type-futures">F</td>
+                    <td className="price">${binanceData.price.toFixed(7)}</td>
+                    <td className="bid">${binanceData.bestBid.toFixed(7)}</td>
+                    <td className="ask">${binanceData.bestAsk.toFixed(7)}</td>
+                  </tr>
+                )}
+                {mexcData && (
+                  <tr>
+                    <td>MEXC</td>
+                    <td className="type-futures">F</td>
+                    <td className="price">${mexcData.price.toFixed(7)}</td>
+                    <td className="bid">${mexcData.bid.toFixed(7)}</td>
+                    <td className="ask">${mexcData.ask.toFixed(7)}</td>
+                  </tr>
+                )}
               </tbody>
             </table>
           )}
