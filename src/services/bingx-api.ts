@@ -295,8 +295,10 @@ export class BingXAPI {
         side: params.side.toUpperCase(),
         type: params.orderType.toUpperCase(),
         quantity: params.qty,
-        positionSide: 'LONG', // Default to LONG position
-        marginCoin: 'USDT'     // Use USDT margin (VST in demo mode)
+        positionSide: 'LONG' // Default to LONG position
+        // Note: marginCoin is automatically determined by BingX based on account type
+        // Demo accounts use VST, production accounts use USDT
+        // Do NOT specify marginCoin parameter
       };
 
       if (params.orderType === 'Limit' && params.price) {
@@ -416,8 +418,8 @@ export class BingXAPI {
         side: side.toUpperCase(),
         type: 'MARKET',
         quantity,
-        positionSide,
-        marginCoin: 'USDT'  // Use USDT margin (VST in demo mode)
+        positionSide
+        // Note: marginCoin is automatically determined by BingX
       };
 
       logger.info('BingX API', 'Placing close order...', orderParams);
