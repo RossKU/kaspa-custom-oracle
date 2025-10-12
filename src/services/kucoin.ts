@@ -1,4 +1,6 @@
 // Kucoin Futures WebSocket with Token Authentication
+import { logger } from '../utils/logger';
+
 const TOKEN_API = 'https://api-futures.kucoin.com/api/v1/bullet-public';
 
 interface KucoinTokenResponse {
@@ -61,7 +63,7 @@ export class KucoinPriceMonitor {
       this.ws = new WebSocket(`${this.endpoint}?token=${this.token}&connectId=${connectId}`);
 
       this.ws.onopen = () => {
-        console.log('[Kucoin] ✅ Connected!');
+        logger.info('Kucoin', '✅ Connected to WebSocket');
 
         // Subscribe to KASUSDTM ticker
         this.subscribeTicker();
@@ -75,30 +77,30 @@ export class KucoinPriceMonitor {
       this.ws.onmessage = (event) => {
         try {
           const message = JSON.parse(event.data);
-          console.log('[Kucoin] Received:', message);
+          logger.debug('Kucoin', 'Received message', message);
 
           // Handle welcome message
           if (message.type === 'welcome') {
-            console.log('[Kucoin] ✅ Welcome message received');
+            logger.info('Kucoin', '✅ Welcome message received');
           }
 
           // Handle pong
           if (message.type === 'pong') {
-            console.log('[Kucoin] Pong received');
+            logger.debug('Kucoin', 'Pong received');
           }
 
           // Handle ack message (subscription confirmation)
           if (message.type === 'ack') {
-            console.log('[Kucoin] ✅ Subscription acknowledged:', message);
+            logger.info('Kucoin', '✅ Subscription acknowledged', message);
           }
 
           // Handle ticker data
           if (message.type === 'message' && message.topic === '/market/ticker:KASUSDTM') {
-            console.log('[Kucoin] 📊 Ticker data received:', message.data);
+            logger.debug('Kucoin', '📊 Ticker data received', message.data);
             this.handleTickerData(message.data);
           }
         } catch (error) {
-          console.error('[Kucoin] ❌ Parse error:', error, event.data);
+          logger.error('Kucoin', '❌ Parse error', { error, rawData: event.data });
           this.onErrorCallback?.('Failed to parse ticker data');
         }
       };
@@ -129,33 +131,35 @@ export class KucoinPriceMonitor {
 
   private async fetchToken() {
     try {
-      console.log('[Kucoin] Fetching token from:', TOKEN_API);
+      logger.info('Kucoin', 'Fetching token from API...');
 
       const response = await fetch(TOKEN_API, {
         method: 'POST'
         // Remove Content-Type header to avoid CORS preflight
       });
 
-      console.log('[Kucoin] Token response status:', response.status);
+      logger.debug('Kucoin', `Token response status: ${response.status}`);
 
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
 
       const data: KucoinTokenResponse = await response.json();
-      console.log('[Kucoin] Token response:', data);
+      logger.debug('Kucoin', 'Token response received', { code: data.code });
 
       if (data.code === '200000' && data.data) {
         this.token = data.data.token;
         // Use first available server
         this.endpoint = data.data.instanceServers[0].endpoint;
-        console.log('[Kucoin] ✅ Token obtained:', this.token.substring(0, 20) + '...');
-        console.log('[Kucoin] ✅ Endpoint:', this.endpoint);
+        logger.info('Kucoin', '✅ Token obtained successfully', {
+          tokenPreview: this.token.substring(0, 20) + '...',
+          endpoint: this.endpoint
+        });
       } else {
         throw new Error(`Invalid token response: ${data.code}`);
       }
     } catch (error) {
-      console.error('[Kucoin] ❌ Token fetch error:', error);
+      logger.error('Kucoin', '❌ Token fetch failed', error);
       this.onErrorCallback?.(`Token fetch failed: ${error}`);
       throw error;
     }
@@ -170,7 +174,7 @@ export class KucoinPriceMonitor {
       response: true
     };
 
-    console.log('[Kucoin] Subscribing to ticker:', subscribeMessage);
+    logger.info('Kucoin', 'Subscribing to ticker', subscribeMessage);
     this.ws?.send(JSON.stringify(subscribeMessage));
   }
 
@@ -180,7 +184,7 @@ export class KucoinPriceMonitor {
       type: 'ping'
     };
 
-    console.log('[Kucoin] Sending ping');
+    logger.debug('Kucoin', 'Sending ping');
     this.ws?.send(JSON.stringify(pingMessage));
   }
 
@@ -197,7 +201,7 @@ export class KucoinPriceMonitor {
       ask
     };
 
-    console.log('[Kucoin] Parsed price data:', priceData);
+    logger.info('Kucoin', '📊 Price data updated', priceData);
     this.onDataCallback?.(priceData);
   }
 

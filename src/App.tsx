@@ -6,6 +6,7 @@ import { GateioPriceMonitor, type GateioPriceData } from './services/gateio'
 import { KucoinPriceMonitor, type KucoinPriceData } from './services/kucoin'
 import { BingXPriceMonitor, type BingXPriceData } from './services/bingx'
 import type { PriceData } from './types/binance'
+import { logger } from './utils/logger'
 import './App.css'
 
 function App() {
@@ -18,12 +19,27 @@ function App() {
   const [isConnecting, setIsConnecting] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [lastUpdateTime, setLastUpdateTime] = useState<string>('')
+  const [debugLogs, setDebugLogs] = useState<string[]>([])
+  const [showDebug, setShowDebug] = useState(false)
   const binanceMonitorRef = useRef<BinancePriceMonitor | null>(null)
   const mexcMonitorRef = useRef<MexcPriceMonitor | null>(null)
   const bybitMonitorRef = useRef<BybitPriceMonitor | null>(null)
   const gateioMonitorRef = useRef<GateioPriceMonitor | null>(null)
   const kucoinMonitorRef = useRef<KucoinPriceMonitor | null>(null)
   const bingxMonitorRef = useRef<BingXPriceMonitor | null>(null)
+
+  // Subscribe to debug logs
+  useEffect(() => {
+    const unsubscribe = logger.subscribe((logs) => {
+      const formatted = logs.slice(-100).map(log => {
+        const dataStr = log.data ? ` | ${JSON.stringify(log.data)}` : '';
+        return `[${log.timestamp.split('T')[1].split('.')[0]}] [${log.level.toUpperCase()}] [${log.source}] ${log.message}${dataStr}`;
+      });
+      setDebugLogs(formatted);
+    });
+
+    return () => unsubscribe();
+  }, [])
 
   // Binance WebSocket
   useEffect(() => {
@@ -243,10 +259,40 @@ function App() {
             </table>
           )}
         </section>
+
+        {/* Debug Log Panel */}
+        <section className="debug-section">
+          <div className="debug-header">
+            <button onClick={() => setShowDebug(!showDebug)} className="debug-toggle">
+              {showDebug ? '▼' : '▶'} Debug Logs ({debugLogs.length})
+            </button>
+            <div className="debug-controls">
+              <button onClick={() => logger.downloadLogs()} className="debug-button">
+                📥 Download Logs
+              </button>
+              <button onClick={() => logger.clear()} className="debug-button">
+                🗑️ Clear Logs
+              </button>
+            </div>
+          </div>
+          {showDebug && (
+            <div className="debug-logs">
+              {debugLogs.length === 0 ? (
+                <div className="debug-empty">No logs yet...</div>
+              ) : (
+                debugLogs.map((log, idx) => (
+                  <div key={idx} className="debug-log-entry">
+                    {log}
+                  </div>
+                ))
+              )}
+            </div>
+          )}
+        </section>
       </main>
 
       <footer className="footer">
-        <p>Kaspa Custom Oracle v0.5.0 - 6 Exchanges</p>
+        <p>Kaspa Custom Oracle v0.5.0 - 6 Exchanges | Debug Logging Enabled</p>
       </footer>
     </div>
   )
