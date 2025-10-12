@@ -277,6 +277,7 @@ export class BingXAPI {
 
   /**
    * Place order (Market or Limit)
+   * BingX Perpetual Futures uses V2 API: /openApi/swap/v2/trade/order
    */
   async placeOrder(params: {
     symbol: string;
@@ -298,7 +299,8 @@ export class BingXAPI {
         orderParams.price = params.price;
       }
 
-      const response = await this.request('POST', '/openApi/contract/v1/order', orderParams);
+      // Use V2 API endpoint for perpetual futures
+      const response = await this.request('POST', '/openApi/swap/v2/trade/order', orderParams);
 
       if (response.code !== 0) {
         throw new Error(response.msg || 'Failed to place order');
@@ -323,10 +325,11 @@ export class BingXAPI {
 
   /**
    * Get current position for a specific symbol
+   * BingX Perpetual Futures uses V2 API: /openApi/swap/v2/user/positions
    */
   async getPosition(symbol: string): Promise<any> {
     try {
-      const response = await this.request('GET', '/openApi/contract/v1/allPosition', {
+      const response = await this.request('GET', '/openApi/swap/v2/user/positions', {
         symbol
       });
 
@@ -346,12 +349,13 @@ export class BingXAPI {
 
   /**
    * Get all open positions
+   * BingX Perpetual Futures uses V2 API: /openApi/swap/v2/user/positions
    */
   async getAllPositions(): Promise<any[]> {
     try {
       logger.info('BingX API', 'Fetching all positions...');
 
-      const response = await this.request('GET', '/openApi/contract/v1/allPosition', {});
+      const response = await this.request('GET', '/openApi/swap/v2/user/positions', {});
 
       if (response.code !== 0) {
         logger.error('BingX API', 'Failed to fetch positions', {
@@ -413,7 +417,8 @@ export class BingXAPI {
 
       logger.info('BingX API', 'Placing close order...', orderParams);
 
-      const response = await this.request('POST', '/openApi/contract/v1/order', orderParams);
+      // Use V2 API endpoint for perpetual futures
+      const response = await this.request('POST', '/openApi/swap/v2/trade/order', orderParams);
 
       if (response.code !== 0) {
         throw new Error(response.msg || 'Failed to close position');
