@@ -299,7 +299,9 @@ export class BingXAPI {
         status: 'Created'
       };
     } catch (error) {
-      console.error('Failed to place order:', error);
+      logger.error('BingX API', 'Failed to place order', {
+        error: error instanceof Error ? error.message : String(error)
+      });
       throw error;
     }
   }
@@ -320,7 +322,9 @@ export class BingXAPI {
       const positions = response.data || [];
       return positions.find((p: any) => p.symbol === symbol) || null;
     } catch (error) {
-      console.error('Failed to get position:', error);
+      logger.error('BingX API', 'Failed to get position', {
+        error: error instanceof Error ? error.message : String(error)
+      });
       throw error;
     }
   }

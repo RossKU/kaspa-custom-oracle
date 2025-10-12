@@ -301,7 +301,9 @@ export class BybitAPI {
         status: 'Created'
       };
     } catch (error) {
-      console.error('Failed to place order:', error);
+      logger.error('Bybit API', 'Failed to place order', {
+        error: error instanceof Error ? error.message : String(error)
+      });
       throw error;
     }
   }
@@ -322,7 +324,9 @@ export class BybitAPI {
 
       return response.result.list[0] || null;
     } catch (error) {
-      console.error('Failed to get position:', error);
+      logger.error('Bybit API', 'Failed to get position', {
+        error: error instanceof Error ? error.message : String(error)
+      });
       throw error;
     }
   }

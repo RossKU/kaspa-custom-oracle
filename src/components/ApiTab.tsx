@@ -120,7 +120,9 @@ export function ApiTab() {
         balance
       });
     } catch (error) {
-      console.error('Connection test error:', error);
+      logger.error('API Tab', 'Connection test error', {
+        error: error instanceof Error ? error.message : String(error)
+      });
       setStatus({
         connected: false,
         message: `❌ Error: ${error instanceof Error ? error.message : 'Unknown error'}`
