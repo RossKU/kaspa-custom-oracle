@@ -1,35 +1,38 @@
-import { useState, useEffect } from 'react'
-import { fetchKasPrice } from './services/binance'
+import { useState, useEffect, useRef } from 'react'
+import { BinancePriceMonitor } from './services/binance'
 import type { PriceData } from './types/binance'
 import './App.css'
 
 function App() {
   const [priceData, setPriceData] = useState<PriceData | null>(null)
-  const [isLoading, setIsLoading] = useState(true)
+  const [isConnecting, setIsConnecting] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [lastUpdateTime, setLastUpdateTime] = useState<string>('')
-
-  const loadData = async () => {
-    try {
-      setError(null)
-      const data = await fetchKasPrice()
-      setPriceData(data)
-      setLastUpdateTime(new Date().toLocaleTimeString())
-      setIsLoading(false)
-    } catch (err) {
-      setError('Failed to fetch price data')
-      setIsLoading(false)
-    }
-  }
+  const monitorRef = useRef<BinancePriceMonitor | null>(null)
 
   useEffect(() => {
-    // 初回ロード
-    loadData()
+    // WebSocket接続
+    const monitor = new BinancePriceMonitor()
+    monitorRef.current = monitor
 
-    // 10秒ごとに自動更新
-    const interval = setInterval(loadData, 10000)
+    monitor.connect(
+      (data) => {
+        setPriceData(data)
+        setLastUpdateTime(new Date().toLocaleTimeString())
+        setIsConnecting(false)
+        setError(null)
+      },
+      (errorMsg) => {
+        setError(errorMsg)
+        setIsConnecting(false)
+      }
+    )
 
-    return () => clearInterval(interval)
+    // クリーンアップ
+    return () => {
+      monitor.disconnect()
+      monitorRef.current = null
+    }
   }, [])
 
   return (
@@ -44,8 +47,8 @@ function App() {
           <h2>System Status</h2>
           <div className="status-item">
             <span>Connection:</span>
-            <span className="status-value" style={{ color: isLoading ? '#ffc107' : error ? '#dc3545' : '#28a745' }}>
-              {isLoading ? 'Connecting...' : error ? 'Error' : 'Connected'}
+            <span className="status-value" style={{ color: isConnecting ? '#ffc107' : error ? '#dc3545' : '#28a745' }}>
+              {isConnecting ? 'Connecting...' : error ? 'Error' : 'Connected'}
             </span>
           </div>
           <div className="status-item">
@@ -62,7 +65,7 @@ function App() {
 
         <section className="price-panel">
           <h2>Price Monitor - KASUSDT Perpetual</h2>
-          {isLoading && <p>Loading data...</p>}
+          {isConnecting && <p>Connecting to Binance WebSocket...</p>}
           {error && <p style={{ color: '#dc3545' }}>{error}</p>}
           {priceData && (
             <div className="price-grid">
@@ -104,7 +107,7 @@ function App() {
       </main>
 
       <footer className="footer">
-        <p>Kaspa Custom Oracle v0.1.0</p>
+        <p>Kaspa Custom Oracle v0.2.0 - Real-time WebSocket</p>
       </footer>
     </div>
   )

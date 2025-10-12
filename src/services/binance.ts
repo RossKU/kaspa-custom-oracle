@@ -1,38 +1,122 @@
-import axios from 'axios';
-import type { BinanceTicker24hr, BinanceOrderBook, PriceData } from '../types/binance';
+import type { PriceData } from '../types/binance';
 
-const BINANCE_FUTURES_API = 'https://fapi.binance.com/fapi/v1';
+const BINANCE_WS_BASE = 'wss://fstream.binance.com/ws';
 
-export const fetchKasPrice = async (): Promise<PriceData> => {
-  try {
-    // 24時間統計データ取得
-    const tickerResponse = await axios.get<BinanceTicker24hr>(
-      `${BINANCE_FUTURES_API}/ticker/24hr?symbol=KASUSDT`
-    );
-    const ticker = tickerResponse.data;
+export class BinancePriceMonitor {
+  private ws: WebSocket | null = null;
+  private bookTickerWs: WebSocket | null = null;
+  private onDataCallback: ((data: PriceData) => void) | null = null;
+  private onErrorCallback: ((error: string) => void) | null = null;
+  private currentData: Partial<PriceData> = {};
 
-    // 板情報取得（Bid/Ask）
-    const depthResponse = await axios.get<BinanceOrderBook>(
-      `${BINANCE_FUTURES_API}/depth?symbol=KASUSDT&limit=1`
-    );
-    const depth = depthResponse.data;
+  connect(
+    onData: (data: PriceData) => void,
+    onError: (error: string) => void
+  ) {
+    this.onDataCallback = onData;
+    this.onErrorCallback = onError;
 
-    const priceData: PriceData = {
-      symbol: ticker.symbol,
-      price: parseFloat(ticker.lastPrice),
-      priceChange: parseFloat(ticker.priceChange),
-      priceChangePercent: parseFloat(ticker.priceChangePercent),
-      high24h: parseFloat(ticker.highPrice),
-      low24h: parseFloat(ticker.lowPrice),
-      volume24h: ticker.volume,
-      lastUpdate: Date.now(),
-      bestBid: depth.bids.length > 0 ? parseFloat(depth.bids[0][0]) : 0,
-      bestAsk: depth.asks.length > 0 ? parseFloat(depth.asks[0][0]) : 0,
+    // 24時間統計データ（価格、変動率、高値、安値、出来高）
+    this.ws = new WebSocket(`${BINANCE_WS_BASE}/kasusdt@ticker`);
+
+    this.ws.onopen = () => {
+      console.log('Connected to Binance WebSocket (ticker)');
     };
 
-    return priceData;
-  } catch (error) {
-    console.error('Error fetching KAS price:', error);
-    throw error;
+    this.ws.onmessage = (event) => {
+      try {
+        const data = JSON.parse(event.data);
+
+        this.currentData = {
+          ...this.currentData,
+          symbol: data.s,
+          price: parseFloat(data.c),
+          priceChange: parseFloat(data.p),
+          priceChangePercent: parseFloat(data.P),
+          high24h: parseFloat(data.h),
+          low24h: parseFloat(data.l),
+          volume24h: data.v,
+          lastUpdate: Date.now(),
+        };
+
+        this.emitData();
+      } catch (error) {
+        console.error('Error parsing ticker data:', error);
+        this.onErrorCallback?.('Failed to parse price data');
+      }
+    };
+
+    this.ws.onerror = (error) => {
+      console.error('WebSocket ticker error:', error);
+      this.onErrorCallback?.('WebSocket connection error');
+    };
+
+    this.ws.onclose = () => {
+      console.log('WebSocket ticker closed');
+      // 自動再接続
+      setTimeout(() => {
+        if (this.onDataCallback && this.onErrorCallback) {
+          this.connect(this.onDataCallback, this.onErrorCallback);
+        }
+      }, 5000);
+    };
+
+    // Bid/Ask価格（板情報）
+    this.bookTickerWs = new WebSocket(`${BINANCE_WS_BASE}/kasusdt@bookTicker`);
+
+    this.bookTickerWs.onopen = () => {
+      console.log('Connected to Binance WebSocket (bookTicker)');
+    };
+
+    this.bookTickerWs.onmessage = (event) => {
+      try {
+        const data = JSON.parse(event.data);
+
+        this.currentData = {
+          ...this.currentData,
+          bestBid: parseFloat(data.b),
+          bestAsk: parseFloat(data.a),
+        };
+
+        this.emitData();
+      } catch (error) {
+        console.error('Error parsing book ticker data:', error);
+      }
+    };
+
+    this.bookTickerWs.onerror = (error) => {
+      console.error('WebSocket bookTicker error:', error);
+    };
+
+    this.bookTickerWs.onclose = () => {
+      console.log('WebSocket bookTicker closed');
+      // 自動再接続
+      setTimeout(() => {
+        if (this.onDataCallback && this.onErrorCallback) {
+          this.bookTickerWs = new WebSocket(`${BINANCE_WS_BASE}/kasusdt@bookTicker`);
+        }
+      }, 5000);
+    };
   }
-};
+
+  private emitData() {
+    // 全てのデータが揃ったら送信
+    if (
+      this.currentData.symbol &&
+      this.currentData.price !== undefined &&
+      this.currentData.bestBid !== undefined &&
+      this.currentData.bestAsk !== undefined
+    ) {
+      this.onDataCallback?.(this.currentData as PriceData);
+    }
+  }
+
+  disconnect() {
+    this.ws?.close();
+    this.bookTickerWs?.close();
+    this.ws = null;
+    this.bookTickerWs = null;
+    this.onDataCallback = null;
+    this.onErrorCallback = null;
+  }
+}
