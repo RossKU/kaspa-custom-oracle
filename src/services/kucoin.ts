@@ -79,30 +79,23 @@ export class KucoinPriceMonitor {
       this.ws.onmessage = (event) => {
         try {
           const message = JSON.parse(event.data);
-          logger.debug('Kucoin', 'Received message', message);
 
           // Handle welcome message
           if (message.type === 'welcome') {
             logger.info('Kucoin', '✅ Welcome message received');
           }
 
-          // Handle pong
-          if (message.type === 'pong') {
-            logger.debug('Kucoin', 'Pong received');
-          }
-
           // Handle ack message (subscription confirmation)
           if (message.type === 'ack') {
-            logger.info('Kucoin', '✅ Subscription acknowledged', message);
+            logger.info('Kucoin', '✅ Subscription acknowledged');
           }
 
           // Handle ticker data
           if (message.type === 'message' && message.topic === '/contractMarket/tickerV2:KASUSDTM') {
-            logger.debug('Kucoin', '📊 Ticker data received', message.data);
             this.handleTickerData(message.data);
           }
         } catch (error) {
-          logger.error('Kucoin', '❌ Parse error', { error, rawData: event.data });
+          logger.error('Kucoin', '❌ Parse error', { error: error instanceof Error ? error.message : String(error) });
           this.onErrorCallback?.('Failed to parse ticker data');
         }
       };
@@ -206,8 +199,6 @@ export class KucoinPriceMonitor {
       id: Date.now(),
       type: 'ping'
     };
-
-    logger.debug('Kucoin', 'Sending ping');
     this.ws?.send(JSON.stringify(pingMessage));
   }
 
@@ -226,7 +217,6 @@ export class KucoinPriceMonitor {
       ask
     };
 
-    logger.info('Kucoin', '📊 Price data updated', priceData);
     this.onDataCallback?.(priceData);
   }
 

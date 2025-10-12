@@ -19,10 +19,6 @@ export class BinancePriceMonitor {
     // 24時間統計データ（価格、変動率、高値、安値、出来高）
     this.ws = new WebSocket(`${BINANCE_WS_BASE}/kasusdt@ticker`);
 
-    this.ws.onopen = () => {
-      console.log('Connected to Binance WebSocket (ticker)');
-    };
-
     this.ws.onmessage = (event) => {
       try {
         const data = JSON.parse(event.data);
@@ -41,18 +37,15 @@ export class BinancePriceMonitor {
 
         this.emitData();
       } catch (error) {
-        console.error('Error parsing ticker data:', error);
         this.onErrorCallback?.('Failed to parse price data');
       }
     };
 
-    this.ws.onerror = (error) => {
-      console.error('WebSocket ticker error:', error);
+    this.ws.onerror = () => {
       this.onErrorCallback?.('WebSocket connection error');
     };
 
     this.ws.onclose = () => {
-      console.log('WebSocket ticker closed');
       // 自動再接続
       setTimeout(() => {
         if (this.onDataCallback && this.onErrorCallback) {
@@ -63,10 +56,6 @@ export class BinancePriceMonitor {
 
     // Bid/Ask価格（板情報）
     this.bookTickerWs = new WebSocket(`${BINANCE_WS_BASE}/kasusdt@bookTicker`);
-
-    this.bookTickerWs.onopen = () => {
-      console.log('Connected to Binance WebSocket (bookTicker)');
-    };
 
     this.bookTickerWs.onmessage = (event) => {
       try {
@@ -80,16 +69,15 @@ export class BinancePriceMonitor {
 
         this.emitData();
       } catch (error) {
-        console.error('Error parsing book ticker data:', error);
+        // Silent error
       }
     };
 
-    this.bookTickerWs.onerror = (error) => {
-      console.error('WebSocket bookTicker error:', error);
+    this.bookTickerWs.onerror = () => {
+      // Silent error
     };
 
     this.bookTickerWs.onclose = () => {
-      console.log('WebSocket bookTicker closed');
       // 自動再接続
       setTimeout(() => {
         if (this.onDataCallback && this.onErrorCallback) {

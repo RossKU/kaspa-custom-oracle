@@ -60,8 +60,6 @@ export class BingXPriceMonitor {
     this.ws.binaryType = 'arraybuffer';
 
     this.ws.onopen = () => {
-      console.log('[BingX] ✅ Connected!');
-
       // Subscribe to KAS-USDT ticker
       this.subscribeTicker();
 
@@ -78,11 +76,8 @@ export class BingXPriceMonitor {
         const decompressed = pako.inflate(compressed, { to: 'string' });
         const message = JSON.parse(decompressed);
 
-        console.log('[BingX] Received:', message);
-
         // Handle Pong
         if (message.pong) {
-          console.log('[BingX] Pong received:', message.pong);
           return;
         }
 
@@ -91,18 +86,15 @@ export class BingXPriceMonitor {
           this.handleTickerData(message);
         }
       } catch (error) {
-        console.error('[BingX] Decompress/Parse error:', error);
         this.onErrorCallback?.('Failed to parse ticker data');
       }
     };
 
-    this.ws.onerror = (error) => {
-      console.error('[BingX] WebSocket error:', error);
+    this.ws.onerror = () => {
       this.onErrorCallback?.('WebSocket connection error');
     };
 
     this.ws.onclose = () => {
-      console.log('[BingX] WebSocket closed');
       if (this.pingInterval) {
         clearInterval(this.pingInterval);
       }
@@ -122,8 +114,6 @@ export class BingXPriceMonitor {
       reqType: 'sub',
       dataType: 'KAS-USDT@ticker'
     };
-
-    console.log('[BingX] Subscribing to ticker:', subscribeMessage);
     this.ws?.send(JSON.stringify(subscribeMessage));
   }
 
@@ -131,8 +121,6 @@ export class BingXPriceMonitor {
     const pingMessage = {
       ping: Date.now()
     };
-
-    console.log('[BingX] Sending ping');
     this.ws?.send(JSON.stringify(pingMessage));
   }
 
@@ -140,10 +128,7 @@ export class BingXPriceMonitor {
     // BingX can send data in two formats:
     // 1. Nested: { dataType: "...", data: { c: "...", B: "...", A: "..." } }
     // 2. Flat: { e: "24hrTicker", c: "...", B: "...", A: "..." }
-
     const data = msg.data || msg;
-
-    console.log('[BingX] Processing ticker data:', data);
 
     // Extract price fields (c = close/last, B = bidPrice, A = askPrice)
     const price = data.c ? parseFloat(data.c) : (this.lastPriceData?.price ?? 0);
@@ -152,7 +137,6 @@ export class BingXPriceMonitor {
 
     // Only update if we have valid data
     if (price === 0 && bid === 0 && ask === 0) {
-      console.log('[BingX] No valid price data, skipping update');
       return;
     }
 
@@ -166,8 +150,6 @@ export class BingXPriceMonitor {
 
     // Store for next update
     this.lastPriceData = priceData;
-
-    console.log('[BingX] Parsed price data:', priceData);
     this.onDataCallback?.(priceData);
   }
 
