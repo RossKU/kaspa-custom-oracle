@@ -2,6 +2,8 @@
 import { logger } from '../utils/logger';
 
 const TOKEN_API = 'https://api-futures.kucoin.com/api/v1/bullet-public';
+// CORS proxy (temporary solution for testing)
+const CORS_PROXY = 'https://corsproxy.io/?';
 
 interface KucoinTokenResponse {
   code: string;
@@ -131,9 +133,13 @@ export class KucoinPriceMonitor {
 
   private async fetchToken() {
     try {
-      logger.info('Kucoin', 'Fetching token from API...', { url: TOKEN_API });
+      const proxiedUrl = CORS_PROXY + encodeURIComponent(TOKEN_API);
+      logger.info('Kucoin', 'Fetching token from API via CORS proxy...', {
+        originalUrl: TOKEN_API,
+        proxiedUrl
+      });
 
-      const response = await fetch(TOKEN_API, {
+      const response = await fetch(proxiedUrl, {
         method: 'POST'
         // Remove Content-Type header to avoid CORS preflight
       });
