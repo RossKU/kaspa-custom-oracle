@@ -7,9 +7,17 @@ import { KucoinPriceMonitor, type KucoinPriceData } from './services/kucoin'
 import { BingXPriceMonitor, type BingXPriceData } from './services/bingx'
 import type { PriceData } from './types/binance'
 import { logger } from './utils/logger'
+import { PriceTab } from './components/PriceTab'
+import { ApiTab } from './components/ApiTab'
+import { TradeTab } from './components/TradeTab'
+import { SettingsTab } from './components/SettingsTab'
+import { DebugTab } from './components/DebugTab'
 import './App.css'
 
+type TabType = 'price' | 'api' | 'trade' | 'settings' | 'debug';
+
 function App() {
+  const [activeTab, setActiveTab] = useState<TabType>('price')
   const [binanceData, setBinanceData] = useState<PriceData | null>(null)
   const [mexcData, setMexcData] = useState<MexcPriceData | null>(null)
   const [bybitData, setBybitData] = useState<BybitPriceData | null>(null)
@@ -20,7 +28,6 @@ function App() {
   const [error, setError] = useState<string | null>(null)
   const [lastUpdateTime, setLastUpdateTime] = useState<string>('')
   const [debugLogs, setDebugLogs] = useState<string[]>([])
-  const [showDebug, setShowDebug] = useState(false)
   const binanceMonitorRef = useRef<BinancePriceMonitor | null>(null)
   const mexcMonitorRef = useRef<MexcPriceMonitor | null>(null)
   const bybitMonitorRef = useRef<BybitPriceMonitor | null>(null)
@@ -184,115 +191,60 @@ function App() {
         </div>
       </header>
 
+      <nav className="tabs">
+        <button
+          className={`tab-button ${activeTab === 'price' ? 'active' : ''}`}
+          onClick={() => setActiveTab('price')}
+        >
+          📊 Price
+        </button>
+        <button
+          className={`tab-button ${activeTab === 'api' ? 'active' : ''}`}
+          onClick={() => setActiveTab('api')}
+        >
+          📡 API
+        </button>
+        <button
+          className={`tab-button ${activeTab === 'trade' ? 'active' : ''}`}
+          onClick={() => setActiveTab('trade')}
+        >
+          ⚡ Trade
+        </button>
+        <button
+          className={`tab-button ${activeTab === 'settings' ? 'active' : ''}`}
+          onClick={() => setActiveTab('settings')}
+        >
+          ⚙️ Settings
+        </button>
+        <button
+          className={`tab-button ${activeTab === 'debug' ? 'active' : ''}`}
+          onClick={() => setActiveTab('debug')}
+        >
+          🐛 Debug
+        </button>
+      </nav>
+
       <main className="main">
-        <section className="table-section">
-          {isConnecting && <p className="loading-message">Connecting to exchanges...</p>}
-          {error && <p className="error-message">{error}</p>}
-
-          {(binanceData || mexcData || bybitData || gateioData || kucoinData || bingxData) && (
-            <table className="price-table">
-              <thead>
-                <tr>
-                  <th>Exchange</th>
-                  <th>Type</th>
-                  <th>Price</th>
-                  <th>Bid</th>
-                  <th>Ask</th>
-                </tr>
-              </thead>
-              <tbody>
-                {binanceData && (
-                  <tr>
-                    <td>Binance</td>
-                    <td className="type-futures">F</td>
-                    <td className="price">${binanceData.price.toFixed(7)}</td>
-                    <td className="bid">${binanceData.bestBid.toFixed(7)}</td>
-                    <td className="ask">${binanceData.bestAsk.toFixed(7)}</td>
-                  </tr>
-                )}
-                {mexcData && (
-                  <tr>
-                    <td>MEXC</td>
-                    <td className="type-futures">F</td>
-                    <td className="price">${mexcData.price.toFixed(7)}</td>
-                    <td className="bid">${mexcData.bid.toFixed(7)}</td>
-                    <td className="ask">${mexcData.ask.toFixed(7)}</td>
-                  </tr>
-                )}
-                {bybitData && (
-                  <tr>
-                    <td>Bybit</td>
-                    <td className="type-futures">F</td>
-                    <td className="price">${bybitData.price.toFixed(7)}</td>
-                    <td className="bid">${bybitData.bid.toFixed(7)}</td>
-                    <td className="ask">${bybitData.ask.toFixed(7)}</td>
-                  </tr>
-                )}
-                {gateioData && (
-                  <tr>
-                    <td>Gate.io</td>
-                    <td className="type-futures">F</td>
-                    <td className="price">${gateioData.price.toFixed(7)}</td>
-                    <td className="bid">${gateioData.bid.toFixed(7)}</td>
-                    <td className="ask">${gateioData.ask.toFixed(7)}</td>
-                  </tr>
-                )}
-                {kucoinData && (
-                  <tr>
-                    <td>Kucoin</td>
-                    <td className="type-futures">F</td>
-                    <td className="price">${kucoinData.price.toFixed(7)}</td>
-                    <td className="bid">${kucoinData.bid.toFixed(7)}</td>
-                    <td className="ask">${kucoinData.ask.toFixed(7)}</td>
-                  </tr>
-                )}
-                {bingxData && (
-                  <tr>
-                    <td>BingX</td>
-                    <td className="type-futures">F</td>
-                    <td className="price">${bingxData.price.toFixed(7)}</td>
-                    <td className="bid">${bingxData.bid.toFixed(7)}</td>
-                    <td className="ask">${bingxData.ask.toFixed(7)}</td>
-                  </tr>
-                )}
-              </tbody>
-            </table>
-          )}
-        </section>
-
-        {/* Debug Log Panel */}
-        <section className="debug-section">
-          <div className="debug-header">
-            <button onClick={() => setShowDebug(!showDebug)} className="debug-toggle">
-              {showDebug ? '▼' : '▶'} Debug Logs ({debugLogs.length})
-            </button>
-            <div className="debug-controls">
-              <button onClick={() => logger.downloadLogs()} className="debug-button">
-                📥 Download Logs
-              </button>
-              <button onClick={() => logger.clear()} className="debug-button">
-                🗑️ Clear Logs
-              </button>
-            </div>
-          </div>
-          {showDebug && (
-            <div className="debug-logs">
-              {debugLogs.length === 0 ? (
-                <div className="debug-empty">No logs yet...</div>
-              ) : (
-                debugLogs.map((log, idx) => (
-                  <div key={idx} className="debug-log-entry">
-                    {log}
-                  </div>
-                ))
-              )}
-            </div>
-          )}
-        </section>
+        {activeTab === 'price' && (
+          <PriceTab
+            binanceData={binanceData}
+            mexcData={mexcData}
+            bybitData={bybitData}
+            gateioData={gateioData}
+            kucoinData={kucoinData}
+            bingxData={bingxData}
+            isConnecting={isConnecting}
+            error={error}
+          />
+        )}
+        {activeTab === 'api' && <ApiTab />}
+        {activeTab === 'trade' && <TradeTab />}
+        {activeTab === 'settings' && <SettingsTab />}
+        {activeTab === 'debug' && <DebugTab debugLogs={debugLogs} />}
       </main>
 
       <footer className="footer">
-        <p>Kaspa Custom Oracle v0.5.0 - 6 Exchanges | Debug Logging Enabled</p>
+        <p>Kaspa Arbitrage System v0.6.0 - 6 Exchanges | Tab Navigation</p>
       </footer>
     </div>
   )

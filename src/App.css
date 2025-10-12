@@ -51,6 +51,41 @@
   background: #dc3545;
 }
 
+/* Tabs Navigation */
+.tabs {
+  background: white;
+  border-bottom: 2px solid #e0e0e0;
+  display: flex;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 0 1rem;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+}
+
+.tab-button {
+  background: none;
+  border: none;
+  padding: 1rem 1.5rem;
+  font-size: 1rem;
+  font-weight: 500;
+  color: #666;
+  cursor: pointer;
+  transition: all 0.2s;
+  border-bottom: 3px solid transparent;
+  white-space: nowrap;
+}
+
+.tab-button:hover {
+  color: #667eea;
+  background: #f5f7ff;
+}
+
+.tab-button.active {
+  color: #667eea;
+  border-bottom-color: #667eea;
+  font-weight: 600;
+}
+
 /* Main */
 .main {
   flex: 1;
@@ -58,6 +93,15 @@
   max-width: 1400px;
   margin: 0 auto;
   width: 100%;
+}
+
+/* Tab Content */
+.tab-content {
+  background: white;
+  border-radius: 8px;
+  padding: 2rem;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+  min-height: 400px;
 }
 
 .table-section {
@@ -165,6 +209,241 @@
 }
 
 .footer p {
+  margin: 0;
+}
+
+/* API Tab Styles */
+.api-tab h2,
+.trade-tab h2,
+.settings-tab h2,
+.debug-tab h2 {
+  margin: 0 0 1.5rem 0;
+  color: #333;
+  font-size: 1.5rem;
+}
+
+.form-group {
+  margin-bottom: 1.5rem;
+}
+
+.form-group label {
+  display: block;
+  margin-bottom: 0.5rem;
+  font-weight: 600;
+  color: #495057;
+}
+
+.form-group input[type="text"],
+.form-group input[type="password"],
+.form-group input[type="number"],
+.form-group select {
+  width: 100%;
+  padding: 0.75rem;
+  border: 1px solid #dee2e6;
+  border-radius: 4px;
+  font-size: 1rem;
+}
+
+.form-group small {
+  display: block;
+  margin-top: 0.5rem;
+  color: #6c757d;
+  font-size: 0.875rem;
+}
+
+.checkbox-group label {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  cursor: pointer;
+}
+
+.checkbox-group input[type="checkbox"] {
+  width: auto;
+  cursor: pointer;
+}
+
+.api-config-box {
+  background: #f8f9fa;
+  border: 1px solid #dee2e6;
+  border-radius: 8px;
+  padding: 1.5rem;
+  margin: 1.5rem 0;
+}
+
+.api-config-box h3 {
+  margin: 0 0 1rem 0;
+  font-size: 1.1rem;
+  color: #495057;
+}
+
+.button-group {
+  display: flex;
+  gap: 1rem;
+  margin: 1.5rem 0;
+}
+
+.btn {
+  padding: 0.75rem 1.5rem;
+  border: none;
+  border-radius: 4px;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.btn-primary {
+  background: #667eea;
+  color: white;
+}
+
+.btn-primary:hover {
+  background: #5568d3;
+}
+
+.btn-success {
+  background: #28a745;
+  color: white;
+}
+
+.btn-success:hover {
+  background: #218838;
+}
+
+.btn-danger {
+  background: #dc3545;
+  color: white;
+}
+
+.btn-danger:hover {
+  background: #c82333;
+}
+
+.btn-secondary {
+  background: #6c757d;
+  color: white;
+}
+
+.btn-secondary:hover {
+  background: #5a6268;
+}
+
+.status-box {
+  background: #f8f9fa;
+  border: 1px solid #dee2e6;
+  border-radius: 8px;
+  padding: 1.5rem;
+  margin: 1.5rem 0;
+}
+
+.status-box.connected {
+  background: #d4edda;
+  border-color: #c3e6cb;
+}
+
+.status-box h3 {
+  margin: 0 0 1rem 0;
+  font-size: 1.1rem;
+  color: #495057;
+}
+
+.status-box p {
+  margin: 0.5rem 0;
+  color: #495057;
+}
+
+.info-box {
+  background: #e7f3ff;
+  border: 1px solid #b3d9ff;
+  border-radius: 8px;
+  padding: 1.5rem;
+  margin: 1.5rem 0;
+}
+
+.info-box h4 {
+  margin: 0 0 1rem 0;
+  color: #004085;
+}
+
+.info-box ol,
+.info-box ul {
+  margin: 0.5rem 0 0.5rem 1.5rem;
+  color: #004085;
+}
+
+.info-box a {
+  color: #667eea;
+  text-decoration: underline;
+}
+
+.warning {
+  color: #856404;
+  background: #fff3cd;
+  border: 1px solid #ffeaa7;
+  padding: 0.75rem;
+  border-radius: 4px;
+  margin-top: 1rem;
+}
+
+/* Trade Tab Styles */
+.coming-soon-box {
+  text-align: center;
+  padding: 3rem 2rem;
+}
+
+.coming-soon-box h3 {
+  color: #667eea;
+  font-size: 2rem;
+  margin-bottom: 1rem;
+}
+
+.planned-features,
+.next-steps {
+  text-align: left;
+  max-width: 600px;
+  margin: 2rem auto;
+  background: #f8f9fa;
+  padding: 1.5rem;
+  border-radius: 8px;
+}
+
+.planned-features ul,
+.next-steps ol {
+  margin: 0.5rem 0 0 1.5rem;
+}
+
+.planned-features li,
+.next-steps li {
+  margin: 0.5rem 0;
+}
+
+/* Settings Tab Styles */
+.settings-group {
+  margin: 2rem 0;
+  padding-bottom: 2rem;
+  border-bottom: 1px solid #dee2e6;
+}
+
+.settings-group:last-child {
+  border-bottom: none;
+}
+
+.settings-group h3 {
+  margin: 0 0 1rem 0;
+  color: #495057;
+  font-size: 1.2rem;
+}
+
+/* Debug Tab Styles */
+.debug-tab .debug-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1.5rem;
+}
+
+.debug-tab h2 {
   margin: 0;
 }
 
@@ -293,5 +572,23 @@
 
   .debug-button {
     flex: 1;
+  }
+
+  .tabs {
+    overflow-x: auto;
+    justify-content: flex-start;
+  }
+
+  .tab-button {
+    padding: 0.75rem 1rem;
+    font-size: 0.9rem;
+  }
+
+  .button-group {
+    flex-direction: column;
+  }
+
+  .button-group .btn {
+    width: 100%;
   }
 }
