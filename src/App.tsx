@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react'
 import { BinancePriceMonitor } from './services/binance'
+import { MexcWebSocketTest } from './services/mexc'
 import type { PriceData } from './types/binance'
 import './App.css'
 
@@ -9,7 +10,9 @@ function App() {
   const [error, setError] = useState<string | null>(null)
   const [lastUpdateTime, setLastUpdateTime] = useState<string>('')
   const monitorRef = useRef<BinancePriceMonitor | null>(null)
+  const mexcTestRef = useRef<MexcWebSocketTest | null>(null)
 
+  // Binance WebSocket
   useEffect(() => {
     const monitor = new BinancePriceMonitor()
     monitorRef.current = monitor
@@ -30,6 +33,20 @@ function App() {
     return () => {
       monitor.disconnect()
       monitorRef.current = null
+    }
+  }, [])
+
+  // MEXC WebSocket Test
+  useEffect(() => {
+    console.log('[App] Starting MEXC connection test...')
+    const mexcTest = new MexcWebSocketTest()
+    mexcTestRef.current = mexcTest
+
+    mexcTest.connect()
+
+    return () => {
+      mexcTest.disconnect()
+      mexcTestRef.current = null
     }
   }, [])
 
