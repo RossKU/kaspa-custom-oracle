@@ -20,7 +20,7 @@ export function ApiTab() {
   const [status, setStatus] = useState<{
     connected: boolean;
     message: string;
-    balance?: { USDT: number; KAS: number };
+    balance?: { USDT: number; VST?: number; KAS: number };
   }>({
     connected: false,
     message: 'Not connected'
@@ -224,6 +224,9 @@ export function ApiTab() {
         {status.balance && (
           <>
             <p>USDT Balance: {status.balance.USDT.toLocaleString()}</p>
+            {status.balance.VST !== undefined && status.balance.VST > 0 && (
+              <p>VST Balance (Demo): {status.balance.VST.toLocaleString()}</p>
+            )}
             <p>KAS Position: {status.balance.KAS.toLocaleString()}</p>
           </>
         )}

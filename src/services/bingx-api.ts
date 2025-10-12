@@ -16,6 +16,7 @@ interface BingXConfig {
 
 interface BalanceResponse {
   USDT: number;
+  VST: number;  // BingX demo trading uses VST
   KAS: number;
 }
 
@@ -255,12 +256,14 @@ export class BingXAPI {
       // BingX returns an array of asset balances
       const balances = response.data || [];
 
-      // Find USDT balance
+      // Find all asset balances
       const usdtAsset = balances.find((b: any) => b.asset === 'USDT');
+      const vstAsset = balances.find((b: any) => b.asset === 'VST');  // Demo trading token
       const kasAsset = balances.find((b: any) => b.asset === 'KAS');
 
       const balance = {
         USDT: parseFloat(usdtAsset?.availableBalance || usdtAsset?.balance || '0'),
+        VST: parseFloat(vstAsset?.availableBalance || vstAsset?.balance || '0'),
         KAS: parseFloat(kasAsset?.availableBalance || kasAsset?.balance || '0')
       };
 
@@ -292,7 +295,8 @@ export class BingXAPI {
         side: params.side.toUpperCase(),
         type: params.orderType.toUpperCase(),
         quantity: params.qty,
-        positionSide: 'LONG' // Default to LONG position
+        positionSide: 'LONG', // Default to LONG position
+        marginCoin: 'USDT'     // Use USDT margin (VST in demo mode)
       };
 
       if (params.orderType === 'Limit' && params.price) {
@@ -412,7 +416,8 @@ export class BingXAPI {
         side: side.toUpperCase(),
         type: 'MARKET',
         quantity,
-        positionSide
+        positionSide,
+        marginCoin: 'USDT'  // Use USDT margin (VST in demo mode)
       };
 
       logger.info('BingX API', 'Placing close order...', orderParams);
