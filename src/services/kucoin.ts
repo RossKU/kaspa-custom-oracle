@@ -131,7 +131,7 @@ export class KucoinPriceMonitor {
 
   private async fetchToken() {
     try {
-      logger.info('Kucoin', 'Fetching token from API...');
+      logger.info('Kucoin', 'Fetching token from API...', { url: TOKEN_API });
 
       const response = await fetch(TOKEN_API, {
         method: 'POST'
@@ -141,7 +141,13 @@ export class KucoinPriceMonitor {
       logger.debug('Kucoin', `Token response status: ${response.status}`);
 
       if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
+        const errorText = await response.text();
+        logger.error('Kucoin', 'HTTP error response', {
+          status: response.status,
+          statusText: response.statusText,
+          body: errorText
+        });
+        throw new Error(`HTTP error! status: ${response.status} - ${errorText}`);
       }
 
       const data: KucoinTokenResponse = await response.json();
@@ -159,8 +165,20 @@ export class KucoinPriceMonitor {
         throw new Error(`Invalid token response: ${data.code}`);
       }
     } catch (error) {
-      logger.error('Kucoin', '❌ Token fetch failed', error);
-      this.onErrorCallback?.(`Token fetch failed: ${error}`);
+      // Detailed error logging
+      const errorDetails: Record<string, any> = {
+        message: error instanceof Error ? error.message : String(error),
+        name: error instanceof Error ? error.name : 'Unknown',
+        type: typeof error
+      };
+
+      if (error instanceof TypeError) {
+        errorDetails.isCORS = true;
+        errorDetails.hint = 'CORS policy blocking request - browser cannot access Kucoin API directly';
+      }
+
+      logger.error('Kucoin', '❌ Token fetch failed', errorDetails);
+      this.onErrorCallback?.(`Token fetch failed: ${errorDetails.message}`);
       throw error;
     }
   }
