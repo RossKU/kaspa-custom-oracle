@@ -36,11 +36,11 @@ export function TradeTab(props: TradeTabProps) {
   const getPrice = (exchange: string): number | null => {
     switch (exchange) {
       case 'Binance': return props.binanceData?.price || null;
-      case 'MEXC': return props.mexcData?.lastPrice || null;
-      case 'Bybit': return props.bybitData?.lastPrice || null;
+      case 'MEXC': return props.mexcData?.price || null;
+      case 'Bybit': return props.bybitData?.price || null;
       case 'Gate.io': return props.gateioData?.price || null;
-      case 'Kucoin': return props.kucoinData?.lastPrice || null;
-      case 'BingX': return props.bingxData?.lastPrice || null;
+      case 'Kucoin': return props.kucoinData?.price || null;
+      case 'BingX': return props.bingxData?.price || null;
       default: return null;
     }
   };
