@@ -5,7 +5,7 @@ function App() {
     <div className="app">
       <header className="header">
         <h1>Kaspa Custom Oracle</h1>
-        <p>Arbitrage Monitoring System</p>
+        <p>Price Monitoring System</p>
       </header>
 
       <main className="main">
@@ -27,7 +27,7 @@ function App() {
         </section>
 
         <section className="opportunity-panel">
-          <h2>Arbitrage Opportunities</h2>
+          <h2>Trading Opportunities</h2>
           <p>Waiting for data...</p>
         </section>
       </main>
