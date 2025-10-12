@@ -36,13 +36,16 @@ export class BingXAPI {
 
   constructor(config: BingXConfig) {
     this.config = config;
-    // BingX does not have a public testnet/demo trading environment
-    // Always use production endpoint (users should test with small amounts)
-    this.baseUrl = 'https://open-api.bingx.com';
+    // BingX has separate endpoints for production and demo trading
+    // Demo trading (testnet) uses VST (Virtual USDT) on open-api-vst.bingx.com
+    // Production uses real USDT on open-api.bingx.com
+    this.baseUrl = config.testnet
+      ? 'https://open-api-vst.bingx.com'  // Demo/VST endpoint
+      : 'https://open-api.bingx.com';      // Production endpoint
 
     if (config.testnet) {
-      logger.warn('BingX API', 'BingX does not offer a testnet. Using production endpoint.', {
-        recommendation: 'Test with small amounts'
+      logger.info('BingX API', 'Using demo trading endpoint (VST)', {
+        baseUrl: this.baseUrl
       });
     }
   }
