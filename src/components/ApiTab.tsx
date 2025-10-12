@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import BybitAPI from '../services/bybit-api';
+import { logger } from '../utils/logger';
 
 interface ApiConfig {
   exchange: string;
@@ -50,10 +51,31 @@ export function ApiTab() {
       return;
     }
 
+    logger.info('API Tab', 'Starting connection test', {
+      apiKeyLength: config.apiKey.length,
+      apiKeyFirst8: config.apiKey.substring(0, 8),
+      apiKeyLast4: config.apiKey.substring(config.apiKey.length - 4),
+      secretKeyLength: config.apiSecret.length,
+      secretKeyFirst4: config.apiSecret.substring(0, 4),
+      secretKeyLast4: config.apiSecret.substring(config.apiSecret.length - 4),
+      testnet: config.testnet,
+      exchange: config.exchange
+    });
+
+    // Log potential whitespace issues
+    const hasLeadingSpaceKey = config.apiKey !== config.apiKey.trim();
+    const hasLeadingSpaceSecret = config.apiSecret !== config.apiSecret.trim();
+    if (hasLeadingSpaceKey || hasLeadingSpaceSecret) {
+      logger.warn('API Tab', 'Whitespace detected in API keys!', {
+        hasLeadingSpaceKey,
+        hasLeadingSpaceSecret
+      });
+    }
+
     try {
       const api = new BybitAPI({
-        apiKey: config.apiKey,
-        apiSecret: config.apiSecret,
+        apiKey: config.apiKey.trim(),
+        apiSecret: config.apiSecret.trim(),
         testnet: config.testnet
       });
 

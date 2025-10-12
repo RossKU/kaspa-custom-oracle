@@ -42,11 +42,22 @@ export class BybitAPI {
     // Bybit V5 signature format: timestamp + apiKey + recvWindow + params
     const signaturePayload = timestamp + this.config.apiKey + recvWindow + params;
 
-    logger.debug('Bybit API', 'Signature Generation', {
+    logger.debug('Bybit API', 'Signature Generation - Key Info', {
+      apiKeyLength: this.config.apiKey.length,
+      apiKeyFirst8: this.config.apiKey.substring(0, 8),
+      apiKeyLast4: this.config.apiKey.substring(this.config.apiKey.length - 4),
+      secretKeyLength: this.config.apiSecret.length,
+      secretKeyFirst4: this.config.apiSecret.substring(0, 4),
+      secretKeyLast4: this.config.apiSecret.substring(this.config.apiSecret.length - 4)
+    });
+
+    logger.debug('Bybit API', 'Signature Generation - Payload', {
       timestamp,
-      apiKeyPrefix: this.config.apiKey.substring(0, 8) + '...',
+      timestampLength: timestamp.length,
       recvWindow,
-      params: params.length > 100 ? params.substring(0, 100) + '...' : params,
+      params,
+      paramsLength: params.length,
+      signaturePayload,
       signaturePayloadLength: signaturePayload.length
     });
 
@@ -67,8 +78,11 @@ export class BybitAPI {
     const hashArray = Array.from(new Uint8Array(signature));
     const hashHex = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
 
-    logger.debug('Bybit API', 'Generated Signature', {
-      signaturePrefix: hashHex.substring(0, 16) + '...'
+    logger.debug('Bybit API', 'Generated Signature - Full', {
+      signatureLength: hashHex.length,
+      signatureFirst16: hashHex.substring(0, 16),
+      signatureLast16: hashHex.substring(hashHex.length - 16),
+      fullSignature: hashHex
     });
 
     return hashHex;
@@ -115,12 +129,22 @@ export class BybitAPI {
       headers['Content-Type'] = 'application/json';
     }
 
-    logger.debug('Bybit API', 'Request Headers', {
+    logger.debug('Bybit API', 'Request Headers - Summary', {
       url,
+      method,
       apiKeyPrefix: this.config.apiKey.substring(0, 8) + '...',
       timestamp,
       signaturePrefix: signature.substring(0, 16) + '...',
       recvWindow
+    });
+
+    logger.debug('Bybit API', 'Request Headers - Full', {
+      'X-BAPI-API-KEY': this.config.apiKey,
+      'X-BAPI-TIMESTAMP': timestamp,
+      'X-BAPI-SIGN': signature,
+      'X-BAPI-RECV-WINDOW': recvWindow,
+      queryString,
+      body: body || '(empty)'
     });
 
     const response = await fetch(url, {
@@ -149,6 +173,10 @@ export class BybitAPI {
     logger.debug('Bybit API', 'Response Data', {
       retCode: jsonResponse.retCode,
       retMsg: jsonResponse.retMsg
+    });
+
+    logger.debug('Bybit API', 'Full Response Body', {
+      fullResponse: JSON.stringify(jsonResponse, null, 2)
     });
 
     return jsonResponse;
