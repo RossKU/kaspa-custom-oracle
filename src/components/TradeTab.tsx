@@ -238,6 +238,17 @@ export function TradeTab(props: TradeTabProps) {
     setTradeMessage('⏳ Placing Market Buy order...');
 
     try {
+      // Get and log balance before placing order
+      logger.info('Trade Tab', 'Attempting Market Buy', {
+        symbol: 'KAS-USDT',
+        quantity: tradeQuantity,
+        side: 'Buy',
+        type: 'Market'
+      });
+
+      const balance = await bingxApi.getBalance();
+      logger.info('Trade Tab', 'Current balance before order', balance);
+
       const result = await bingxApi.placeOrder({
         symbol: 'KAS-USDT',
         side: 'Buy',
@@ -250,7 +261,10 @@ export function TradeTab(props: TradeTabProps) {
     } catch (error) {
       const errorMsg = error instanceof Error ? error.message : String(error);
       setTradeMessage(`❌ Failed: ${errorMsg}`);
-      logger.error('Trade Tab', 'Market Buy failed', { error: errorMsg });
+      logger.error('Trade Tab', 'Market Buy failed', {
+        error: errorMsg,
+        quantity: tradeQuantity
+      });
     } finally {
       setIsLoading(false);
     }
