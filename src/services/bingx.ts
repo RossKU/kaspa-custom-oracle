@@ -4,18 +4,32 @@ import pako from 'pako';
 const BINGX_WS_URL = 'wss://open-api-swap.bingx.com/swap-market';
 
 interface BingXTickerData {
-  e: string; // Event type
-  E: number; // Event time
-  s: string; // Symbol
-  c: string; // Close price (last price)
-  o: string; // Open price
-  h: string; // High price
-  l: string; // Low price
-  v: string; // Volume
-  A?: string; // Ask price
-  B?: string; // Bid price
-  a?: string; // Best ask price
-  b?: string; // Best bid price
+  dataType?: string;
+  data?: {
+    s?: string;        // symbol
+    c?: string;        // lastPrice (close)
+    o?: string;        // openPrice
+    h?: string;        // highPrice
+    l?: string;        // lowPrice
+    v?: string;        // volume
+    A?: string;        // askPrice
+    B?: string;        // bidPrice
+    a?: string;        // askQty
+    b?: string;        // bidQty
+  };
+  // Direct fields (24hrTicker event)
+  e?: string;          // event type
+  E?: number;          // event time
+  s?: string;          // symbol
+  c?: string;          // lastPrice
+  o?: string;          // openPrice
+  h?: string;          // highPrice
+  l?: string;          // lowPrice
+  v?: string;          // volume
+  A?: string;          // askPrice
+  B?: string;          // bidPrice
+  a?: string;          // askQty
+  b?: string;          // bidQty
 }
 
 export interface BingXPriceData {
@@ -72,8 +86,8 @@ export class BingXPriceMonitor {
           return;
         }
 
-        // Handle ticker data
-        if (message.e === '24hrTicker' || message.dataType === 'KAS-USDT@ticker') {
+        // Handle ticker data - be flexible with message format
+        if (message.e === '24hrTicker' || message.dataType === 'KAS-USDT@ticker' || message.data) {
           this.handleTickerData(message);
         }
       } catch (error) {
@@ -122,12 +136,25 @@ export class BingXPriceMonitor {
     this.ws?.send(JSON.stringify(pingMessage));
   }
 
-  private handleTickerData(data: BingXTickerData) {
-    // BingX ticker may not always include bid/ask in every update
-    // Use last known values if not present
+  private handleTickerData(msg: BingXTickerData) {
+    // BingX can send data in two formats:
+    // 1. Nested: { dataType: "...", data: { c: "...", B: "...", A: "..." } }
+    // 2. Flat: { e: "24hrTicker", c: "...", B: "...", A: "..." }
+
+    const data = msg.data || msg;
+
+    console.log('[BingX] Processing ticker data:', data);
+
+    // Extract price fields (c = close/last, B = bidPrice, A = askPrice)
     const price = data.c ? parseFloat(data.c) : (this.lastPriceData?.price ?? 0);
-    const bid = data.b || data.B ? parseFloat(data.b || data.B || '0') : (this.lastPriceData?.bid ?? price);
-    const ask = data.a || data.A ? parseFloat(data.a || data.A || '0') : (this.lastPriceData?.ask ?? price);
+    const bid = data.B ? parseFloat(data.B) : (this.lastPriceData?.bid ?? price);
+    const ask = data.A ? parseFloat(data.A) : (this.lastPriceData?.ask ?? price);
+
+    // Only update if we have valid data
+    if (price === 0 && bid === 0 && ask === 0) {
+      console.log('[BingX] No valid price data, skipping update');
+      return;
+    }
 
     const priceData: BingXPriceData = {
       exchange: 'BingX',
