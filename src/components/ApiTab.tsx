@@ -27,6 +27,18 @@ export function ApiTab() {
 
   // Load from localStorage
   useEffect(() => {
+    // ⚠️ TEMPORARY: Hardcoded API keys for debugging - REMOVE BEFORE COMMIT!
+    const TEMP_TEST_CONFIG = {
+      exchange: 'bybit',
+      apiKey: 'QlwoI0scFSBwc4cMKp',
+      apiSecret: 'bR83gZgEt0qS6kBeB6fcXNfA3EMCkih6QJtO',
+      testnet: true
+    };
+
+    setConfig(TEMP_TEST_CONFIG);
+    logger.warn('API Tab', '⚠️ Using HARDCODED test API keys - FOR DEBUGGING ONLY!', TEMP_TEST_CONFIG);
+
+    /* Original code - temporarily disabled
     const saved = localStorage.getItem('apiConfig');
     if (saved) {
       try {
@@ -36,6 +48,7 @@ export function ApiTab() {
         // Invalid saved data
       }
     }
+    */
   }, []);
 
   const handleSave = () => {
