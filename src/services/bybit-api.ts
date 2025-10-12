@@ -330,6 +330,151 @@ export class BybitAPI {
       throw error;
     }
   }
+
+  /**
+   * Get all open positions
+   */
+  async getAllPositions(): Promise<any[]> {
+    try {
+      logger.info('Bybit API', 'Fetching all positions...');
+
+      const response = await this.request('GET', '/v5/position/list', {
+        category: 'linear',
+        settleCoin: 'USDT'
+      });
+
+      if (response.retCode !== 0) {
+        logger.error('Bybit API', 'Failed to fetch positions', {
+          retCode: response.retCode,
+          retMsg: response.retMsg
+        });
+        throw new Error(response.retMsg || 'Failed to fetch positions');
+      }
+
+      const positions = response.result.list || [];
+      logger.info('Bybit API', 'Positions fetched successfully', {
+        count: positions.length
+      });
+
+      return positions;
+    } catch (error) {
+      logger.error('Bybit API', 'Get all positions exception', {
+        error: error instanceof Error ? error.message : String(error)
+      });
+      throw error;
+    }
+  }
+
+  /**
+   * Close a specific position by placing opposite order
+   * @param symbol Trading pair (e.g., 'KASUSDT')
+   * @param side Position side ('Buy' = Long, 'Sell' = Short)
+   * @param quantity Position size to close (optional, closes all if not specified)
+   */
+  async closePosition(symbol: string, side: 'Buy' | 'Sell', quantity?: string): Promise<OrderResponse> {
+    try {
+      logger.info('Bybit API', 'Closing position...', {
+        symbol,
+        side,
+        quantity
+      });
+
+      // Get current position to determine quantity if not specified
+      if (!quantity) {
+        const position = await this.getPosition(symbol);
+        if (!position) {
+          throw new Error('No open position found');
+        }
+        quantity = position.size;
+      }
+
+      // Place opposite order to close position
+      // Long position (side=Buy) → Sell order
+      // Short position (side=Sell) → Buy order
+      const closeSide = side === 'Buy' ? 'Sell' : 'Buy';
+
+      const orderParams = {
+        category: 'linear',
+        symbol,
+        side: closeSide,
+        orderType: 'Market',
+        qty: quantity,
+        reduceOnly: true  // Important: This ensures we're closing, not opening new position
+      };
+
+      logger.info('Bybit API', 'Placing close order...', orderParams);
+
+      const response = await this.request('POST', '/v5/order/create', orderParams);
+
+      if (response.retCode !== 0) {
+        throw new Error(response.retMsg || 'Failed to close position');
+      }
+
+      logger.info('Bybit API', 'Position closed successfully', {
+        orderId: response.result.orderId
+      });
+
+      return {
+        orderId: response.result.orderId,
+        symbol,
+        side: closeSide,
+        orderType: 'Market',
+        price: 'Market',
+        qty: quantity,
+        status: 'Closed'
+      };
+    } catch (error) {
+      logger.error('Bybit API', 'Failed to close position', {
+        error: error instanceof Error ? error.message : String(error)
+      });
+      throw error;
+    }
+  }
+
+  /**
+   * Close all open positions at once
+   */
+  async closeAllPositions(): Promise<{ success: boolean; message: string }> {
+    try {
+      logger.info('Bybit API', 'Closing all positions...');
+
+      const positions = await this.getAllPositions();
+      const openPositions = positions.filter((p: any) => parseFloat(p.size) > 0);
+
+      if (openPositions.length === 0) {
+        logger.info('Bybit API', 'No open positions to close');
+        return {
+          success: true,
+          message: 'No open positions'
+        };
+      }
+
+      logger.info('Bybit API', `Closing ${openPositions.length} positions...`);
+
+      // Close each position
+      const closePromises = openPositions.map(async (position: any) => {
+        const symbol = position.symbol;
+        const side = position.side; // 'Buy' or 'Sell'
+        const quantity = position.size;
+
+        return this.closePosition(symbol, side, quantity);
+      });
+
+      await Promise.all(closePromises);
+
+      logger.info('Bybit API', 'All positions closed successfully');
+
+      return {
+        success: true,
+        message: `${openPositions.length} position(s) closed successfully`
+      };
+    } catch (error) {
+      logger.error('Bybit API', 'Failed to close all positions', {
+        error: error instanceof Error ? error.message : String(error)
+      });
+      throw error;
+    }
+  }
 }
 
 export default BybitAPI;
