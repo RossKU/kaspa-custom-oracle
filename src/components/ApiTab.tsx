@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import BybitAPI from '../services/bybit-api';
+import BingXAPI from '../services/bingx-api';
 import { logger } from '../utils/logger';
 
 interface ApiConfig {
@@ -73,11 +74,26 @@ export function ApiTab() {
     }
 
     try {
-      const api = new BybitAPI({
-        apiKey: config.apiKey.trim(),
-        apiSecret: config.apiSecret.trim(),
-        testnet: config.testnet
-      });
+      // Create API instance based on selected exchange
+      let api: BybitAPI | BingXAPI;
+      let exchangeName: string;
+
+      if (config.exchange === 'bingx') {
+        api = new BingXAPI({
+          apiKey: config.apiKey.trim(),
+          apiSecret: config.apiSecret.trim(),
+          testnet: config.testnet
+        });
+        exchangeName = 'BingX';
+      } else {
+        // Default to Bybit
+        api = new BybitAPI({
+          apiKey: config.apiKey.trim(),
+          apiSecret: config.apiSecret.trim(),
+          testnet: config.testnet
+        });
+        exchangeName = 'Bybit';
+      }
 
       // Test connection
       const isConnected = await api.testConnection();
@@ -90,9 +106,17 @@ export function ApiTab() {
       // Get balance
       const balance = await api.getBalance();
 
+      // Create connection message based on exchange and testnet
+      let message = `✅ Connected to ${exchangeName}`;
+      if (config.exchange === 'bybit') {
+        message += ` ${config.testnet ? 'Demo Trading' : 'Production'}`;
+      } else if (config.exchange === 'bingx') {
+        message += config.testnet ? ' (Note: BingX has no testnet, using Production)' : ' Production';
+      }
+
       setStatus({
         connected: true,
-        message: `✅ Connected to Bybit ${config.testnet ? 'Demo Trading' : 'Production'}`,
+        message,
         balance
       });
     } catch (error) {
@@ -128,6 +152,7 @@ export function ApiTab() {
           onChange={(e) => setConfig({ ...config, exchange: e.target.value })}
         >
           <option value="bybit">Bybit</option>
+          <option value="bingx">BingX</option>
           <option value="binance" disabled>Binance (Coming Soon)</option>
           <option value="mexc" disabled>MEXC (Coming Soon)</option>
         </select>
@@ -191,24 +216,46 @@ export function ApiTab() {
         )}
       </div>
 
-      <div className="info-box">
-        <h4>ℹ️ How to get Bybit Demo Trading API keys:</h4>
-        <ol>
-          <li>Go to <a href="https://www.bybit.com" target="_blank" rel="noopener noreferrer">Bybit</a> (Production site)</li>
-          <li>Create an account (free)</li>
-          <li>Switch to <strong>Demo Trading</strong> mode (hover on profile → Demo Trading)</li>
-          <li>Go to API Management</li>
-          <li>Create new API key with "Contract Account" or "Unified Trading" permission</li>
-          <li>Copy API Key and Secret here</li>
-          <li>Check "Use Demo Trading" checkbox above</li>
-        </ol>
-        <p className="warning">
-          ⚠️ Never share your API keys! They are stored locally in your browser.
-        </p>
-        <p style={{marginTop: '1rem', fontSize: '0.9rem', color: '#666'}}>
-          💡 Demo Trading uses virtual funds but real market liquidity - perfect for safe testing!
-        </p>
-      </div>
+      {config.exchange === 'bybit' && (
+        <div className="info-box">
+          <h4>ℹ️ How to get Bybit Demo Trading API keys:</h4>
+          <ol>
+            <li>Go to <a href="https://www.bybit.com" target="_blank" rel="noopener noreferrer">Bybit</a> (Production site)</li>
+            <li>Create an account (free)</li>
+            <li>Switch to <strong>Demo Trading</strong> mode (hover on profile → Demo Trading)</li>
+            <li>Go to API Management</li>
+            <li>Create new API key with "Contract Account" or "Unified Trading" permission</li>
+            <li>Copy API Key and Secret here</li>
+            <li>Check "Use Demo Trading" checkbox above</li>
+          </ol>
+          <p className="warning">
+            ⚠️ Never share your API keys! They are stored locally in your browser.
+          </p>
+          <p style={{marginTop: '1rem', fontSize: '0.9rem', color: '#666'}}>
+            💡 Demo Trading uses virtual funds but real market liquidity - perfect for safe testing!
+          </p>
+        </div>
+      )}
+
+      {config.exchange === 'bingx' && (
+        <div className="info-box">
+          <h4>ℹ️ How to get BingX API keys:</h4>
+          <ol>
+            <li>Go to <a href="https://bingx.com" target="_blank" rel="noopener noreferrer">BingX</a></li>
+            <li>Create an account (free, KYC may be required for trading)</li>
+            <li>Go to Account → API Management</li>
+            <li>Create new API key with "Contract Trading" permission</li>
+            <li>Set IP whitelist for additional security (optional)</li>
+            <li>Copy API Key and Secret here</li>
+          </ol>
+          <p className="warning">
+            ⚠️ Never share your API keys! They are stored locally in your browser.
+          </p>
+          <p style={{marginTop: '1rem', fontSize: '0.9rem', color: '#f39c12'}}>
+            ⚠️ BingX does not offer a testnet. The "Use Demo Trading" checkbox has no effect. Test with small amounts!
+          </p>
+        </div>
+      )}
     </section>
   );
 }
