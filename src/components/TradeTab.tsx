@@ -122,20 +122,64 @@ export function TradeTab(props: TradeTabProps) {
   useEffect(() => {
     if (authState.isAuthenticated) {
       try {
-        const savedConfig = localStorage.getItem('bingx_api_config');
+        logger.info('Trade Tab', 'Attempting to load API config from localStorage');
+
+        // Try loading from bingx_api_config first (backward compatibility)
+        let savedConfig = localStorage.getItem('bingx_api_config');
+        let configSource = 'bingx_api_config';
+
+        // If not found, try apiConfig with exchange = bingx
+        if (!savedConfig) {
+          const apiConfig = localStorage.getItem('apiConfig');
+          logger.info('Trade Tab', 'bingx_api_config not found, trying apiConfig', {
+            apiConfigExists: !!apiConfig
+          });
+
+          if (apiConfig) {
+            const parsed = JSON.parse(apiConfig);
+            if (parsed.exchange === 'bingx') {
+              savedConfig = JSON.stringify({
+                apiKey: parsed.apiKey,
+                apiSecret: parsed.apiSecret,
+                testnet: parsed.testnet
+              });
+              configSource = 'apiConfig (bingx)';
+            } else {
+              logger.warn('Trade Tab', 'apiConfig exists but exchange is not bingx', {
+                exchange: parsed.exchange
+              });
+            }
+          }
+        }
+
         if (savedConfig) {
           const config = JSON.parse(savedConfig);
+          logger.info('Trade Tab', 'API config loaded', {
+            source: configSource,
+            hasApiKey: !!config.apiKey,
+            apiKeyLength: config.apiKey?.length || 0,
+            hasApiSecret: !!config.apiSecret,
+            apiSecretLength: config.apiSecret?.length || 0,
+            testnet: config.testnet
+          });
+
           const api = new BingXAPI({
             apiKey: config.apiKey,
             apiSecret: config.apiSecret,
             testnet: config.testnet
           });
           setBingxApi(api);
-          logger.info('Trade Tab', 'BingX API initialized from localStorage');
+          logger.info('Trade Tab', '✅ BingX API initialized successfully');
+        } else {
+          logger.warn('Trade Tab', 'No BingX API configuration found in localStorage', {
+            bingx_api_config: !!localStorage.getItem('bingx_api_config'),
+            apiConfig: !!localStorage.getItem('apiConfig')
+          });
         }
       } catch (error) {
         logger.error('Trade Tab', 'Failed to initialize BingX API', {
-          error: error instanceof Error ? error.message : String(error)
+          error: error instanceof Error ? error.message : String(error),
+          stack: error instanceof Error ? error.stack : undefined
         });
       }
     }
@@ -143,15 +187,28 @@ export function TradeTab(props: TradeTabProps) {
 
   // Fetch positions periodically
   useEffect(() => {
-    if (!bingxApi || !authState.isAuthenticated) return;
+    if (!bingxApi || !authState.isAuthenticated) {
+      logger.info('Trade Tab', 'Position fetcher not starting', {
+        hasBingxApi: !!bingxApi,
+        isAuthenticated: authState.isAuthenticated
+      });
+      return;
+    }
+
+    logger.info('Trade Tab', 'Starting position fetcher (5s interval)');
 
     const fetchPositions = async () => {
       try {
+        logger.info('Trade Tab', 'Fetching positions...');
         const allPositions = await bingxApi.getAllPositions();
         // Filter only open positions
         const openPositions = allPositions.filter((p: any) => {
           const amt = parseFloat(p.positionAmt || p.availableAmt || '0');
           return amt !== 0;
+        });
+        logger.info('Trade Tab', 'Positions fetched', {
+          total: allPositions.length,
+          open: openPositions.length
         });
         setPositions(openPositions);
       } catch (error) {
@@ -164,7 +221,10 @@ export function TradeTab(props: TradeTabProps) {
     fetchPositions();
     const interval = setInterval(fetchPositions, 5000); // Refresh every 5 seconds
 
-    return () => clearInterval(interval);
+    return () => {
+      logger.info('Trade Tab', 'Stopping position fetcher');
+      clearInterval(interval);
+    };
   }, [bingxApi, authState.isAuthenticated]);
 
   // Manual trading handlers
