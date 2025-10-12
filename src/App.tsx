@@ -1,17 +1,23 @@
 import { useState, useEffect, useRef } from 'react'
 import { BinancePriceMonitor } from './services/binance'
 import { MexcPriceMonitor, type MexcPriceData } from './services/mexc'
+import { BybitPriceMonitor, type BybitPriceData } from './services/bybit'
+import { GateioPriceMonitor, type GateioPriceData } from './services/gateio'
 import type { PriceData } from './types/binance'
 import './App.css'
 
 function App() {
   const [binanceData, setBinanceData] = useState<PriceData | null>(null)
   const [mexcData, setMexcData] = useState<MexcPriceData | null>(null)
+  const [bybitData, setBybitData] = useState<BybitPriceData | null>(null)
+  const [gateioData, setGateioData] = useState<GateioPriceData | null>(null)
   const [isConnecting, setIsConnecting] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [lastUpdateTime, setLastUpdateTime] = useState<string>('')
   const binanceMonitorRef = useRef<BinancePriceMonitor | null>(null)
   const mexcMonitorRef = useRef<MexcPriceMonitor | null>(null)
+  const bybitMonitorRef = useRef<BybitPriceMonitor | null>(null)
+  const gateioMonitorRef = useRef<GateioPriceMonitor | null>(null)
 
   // Binance WebSocket
   useEffect(() => {
@@ -58,6 +64,48 @@ function App() {
     }
   }, [])
 
+  // Bybit WebSocket
+  useEffect(() => {
+    const monitor = new BybitPriceMonitor()
+    bybitMonitorRef.current = monitor
+
+    monitor.connect(
+      (data) => {
+        setBybitData(data)
+        setLastUpdateTime(new Date().toLocaleTimeString())
+      },
+      (errorMsg) => {
+        console.error('[App] Bybit error:', errorMsg)
+      }
+    )
+
+    return () => {
+      monitor.disconnect()
+      bybitMonitorRef.current = null
+    }
+  }, [])
+
+  // Gate.io WebSocket
+  useEffect(() => {
+    const monitor = new GateioPriceMonitor()
+    gateioMonitorRef.current = monitor
+
+    monitor.connect(
+      (data) => {
+        setGateioData(data)
+        setLastUpdateTime(new Date().toLocaleTimeString())
+      },
+      (errorMsg) => {
+        console.error('[App] Gate.io error:', errorMsg)
+      }
+    )
+
+    return () => {
+      monitor.disconnect()
+      gateioMonitorRef.current = null
+    }
+  }, [])
+
   return (
     <div className="app">
       <header className="header">
@@ -77,7 +125,7 @@ function App() {
           {isConnecting && <p className="loading-message">Connecting to exchanges...</p>}
           {error && <p className="error-message">{error}</p>}
 
-          {(binanceData || mexcData) && (
+          {(binanceData || mexcData || bybitData || gateioData) && (
             <table className="price-table">
               <thead>
                 <tr>
@@ -107,6 +155,24 @@ function App() {
                     <td className="ask">${mexcData.ask.toFixed(7)}</td>
                   </tr>
                 )}
+                {bybitData && (
+                  <tr>
+                    <td>Bybit</td>
+                    <td className="type-futures">F</td>
+                    <td className="price">${bybitData.price.toFixed(7)}</td>
+                    <td className="bid">${bybitData.bid.toFixed(7)}</td>
+                    <td className="ask">${bybitData.ask.toFixed(7)}</td>
+                  </tr>
+                )}
+                {gateioData && (
+                  <tr>
+                    <td>Gate.io</td>
+                    <td className="type-futures">F</td>
+                    <td className="price">${gateioData.price.toFixed(7)}</td>
+                    <td className="bid">${gateioData.bid.toFixed(7)}</td>
+                    <td className="ask">${gateioData.ask.toFixed(7)}</td>
+                  </tr>
+                )}
               </tbody>
             </table>
           )}
@@ -114,7 +180,7 @@ function App() {
       </main>
 
       <footer className="footer">
-        <p>Kaspa Custom Oracle v0.3.0</p>
+        <p>Kaspa Custom Oracle v0.4.0 - 4 Exchanges</p>
       </footer>
     </div>
   )
