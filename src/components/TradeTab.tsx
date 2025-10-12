@@ -8,6 +8,7 @@ import type { GateioPriceData } from '../services/gateio';
 import type { KucoinPriceData } from '../services/kucoin';
 import type { BingXPriceData } from '../services/bingx';
 import { logger } from '../utils/logger';
+import BingXAPI from '../services/bingx-api';
 
 interface TradeTabProps {
   binanceData: PriceData | null;
@@ -31,6 +32,13 @@ export function TradeTab(props: TradeTabProps) {
   // Exchange selection state
   const [exchangeA, setExchangeA] = useState('Bybit');
   const [exchangeB, setExchangeB] = useState('BingX');
+
+  // Trading state
+  const [positions, setPositions] = useState<any[]>([]);
+  const [tradeQuantity, setTradeQuantity] = useState('100');
+  const [tradeMessage, setTradeMessage] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
+  const [bingxApi, setBingxApi] = useState<BingXAPI | null>(null);
 
   // Get price from exchange name
   const getPrice = (exchange: string): number | null => {
@@ -107,6 +115,154 @@ export function TradeTab(props: TradeTabProps) {
   const handleKeyPress = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter') {
       handleLogin();
+    }
+  };
+
+  // Initialize BingX API from localStorage
+  useEffect(() => {
+    if (authState.isAuthenticated) {
+      try {
+        const savedConfig = localStorage.getItem('bingx_api_config');
+        if (savedConfig) {
+          const config = JSON.parse(savedConfig);
+          const api = new BingXAPI({
+            apiKey: config.apiKey,
+            apiSecret: config.apiSecret,
+            testnet: config.testnet
+          });
+          setBingxApi(api);
+          logger.info('Trade Tab', 'BingX API initialized from localStorage');
+        }
+      } catch (error) {
+        logger.error('Trade Tab', 'Failed to initialize BingX API', {
+          error: error instanceof Error ? error.message : String(error)
+        });
+      }
+    }
+  }, [authState.isAuthenticated]);
+
+  // Fetch positions periodically
+  useEffect(() => {
+    if (!bingxApi || !authState.isAuthenticated) return;
+
+    const fetchPositions = async () => {
+      try {
+        const allPositions = await bingxApi.getAllPositions();
+        // Filter only open positions
+        const openPositions = allPositions.filter((p: any) => {
+          const amt = parseFloat(p.positionAmt || p.availableAmt || '0');
+          return amt !== 0;
+        });
+        setPositions(openPositions);
+      } catch (error) {
+        logger.error('Trade Tab', 'Failed to fetch positions', {
+          error: error instanceof Error ? error.message : String(error)
+        });
+      }
+    };
+
+    fetchPositions();
+    const interval = setInterval(fetchPositions, 5000); // Refresh every 5 seconds
+
+    return () => clearInterval(interval);
+  }, [bingxApi, authState.isAuthenticated]);
+
+  // Manual trading handlers
+  const handleMarketBuy = async () => {
+    if (!bingxApi) {
+      setTradeMessage('❌ BingX API not configured. Go to API tab first.');
+      return;
+    }
+
+    setIsLoading(true);
+    setTradeMessage('⏳ Placing Market Buy order...');
+
+    try {
+      const result = await bingxApi.placeOrder({
+        symbol: 'KAS-USDT',
+        side: 'Buy',
+        orderType: 'Market',
+        qty: tradeQuantity
+      });
+
+      setTradeMessage(`✅ Buy order placed! Order ID: ${result.orderId}`);
+      logger.info('Trade Tab', 'Market Buy executed', result);
+    } catch (error) {
+      const errorMsg = error instanceof Error ? error.message : String(error);
+      setTradeMessage(`❌ Failed: ${errorMsg}`);
+      logger.error('Trade Tab', 'Market Buy failed', { error: errorMsg });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleMarketSell = async () => {
+    if (!bingxApi) {
+      setTradeMessage('❌ BingX API not configured. Go to API tab first.');
+      return;
+    }
+
+    setIsLoading(true);
+    setTradeMessage('⏳ Placing Market Sell order...');
+
+    try {
+      const result = await bingxApi.placeOrder({
+        symbol: 'KAS-USDT',
+        side: 'Sell',
+        orderType: 'Market',
+        qty: tradeQuantity
+      });
+
+      setTradeMessage(`✅ Sell order placed! Order ID: ${result.orderId}`);
+      logger.info('Trade Tab', 'Market Sell executed', result);
+    } catch (error) {
+      const errorMsg = error instanceof Error ? error.message : String(error);
+      setTradeMessage(`❌ Failed: ${errorMsg}`);
+      logger.error('Trade Tab', 'Market Sell failed', { error: errorMsg });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleClosePosition = async (symbol: string, positionSide: 'LONG' | 'SHORT') => {
+    if (!bingxApi) return;
+
+    setIsLoading(true);
+    setTradeMessage(`⏳ Closing ${positionSide} position...`);
+
+    try {
+      const result = await bingxApi.closePosition(symbol, positionSide);
+      setTradeMessage(`✅ Position closed! Order ID: ${result.orderId}`);
+      logger.info('Trade Tab', 'Position closed', result);
+    } catch (error) {
+      const errorMsg = error instanceof Error ? error.message : String(error);
+      setTradeMessage(`❌ Failed: ${errorMsg}`);
+      logger.error('Trade Tab', 'Close position failed', { error: errorMsg });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleCloseAllPositions = async () => {
+    if (!bingxApi) return;
+
+    if (!confirm('⚠️ Close ALL positions? This cannot be undone!')) {
+      return;
+    }
+
+    setIsLoading(true);
+    setTradeMessage('⏳ Closing all positions...');
+
+    try {
+      const result = await bingxApi.closeAllPositions();
+      setTradeMessage(`✅ ${result.message}`);
+      logger.info('Trade Tab', 'All positions closed', result);
+    } catch (error) {
+      const errorMsg = error instanceof Error ? error.message : String(error);
+      setTradeMessage(`❌ Failed: ${errorMsg}`);
+      logger.error('Trade Tab', 'Close all positions failed', { error: errorMsg });
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -411,6 +567,260 @@ export function TradeTab(props: TradeTabProps) {
               <button style={{ padding: '4px 8px', border: '1px solid #999', background: '#d4edda', cursor: 'pointer', fontSize: '11px' }}>自動</button>
             </div>
           </div>
+        </div>
+      </div>
+
+      {/* Manual Trading Section */}
+      <div style={{
+        marginTop: '30px',
+        border: '2px solid #007bff',
+        borderRadius: '8px',
+        padding: '20px',
+        backgroundColor: '#f8f9fa'
+      }}>
+        <h3 style={{ marginTop: 0, marginBottom: '15px', color: '#007bff' }}>
+          📊 Manual Trading - BingX KAS-USDT
+        </h3>
+
+        {/* API Status */}
+        {!bingxApi && (
+          <div style={{
+            padding: '12px',
+            marginBottom: '15px',
+            backgroundColor: '#fff3cd',
+            border: '1px solid #ffc107',
+            borderRadius: '4px',
+            color: '#856404'
+          }}>
+            ⚠️ BingX API not configured. Go to <strong>API Tab</strong> and set up your API keys first.
+          </div>
+        )}
+
+        {/* Trade Message */}
+        {tradeMessage && (
+          <div style={{
+            padding: '12px',
+            marginBottom: '15px',
+            backgroundColor: tradeMessage.includes('✅') ? '#d4edda' : tradeMessage.includes('❌') ? '#f8d7da' : '#d1ecf1',
+            border: `1px solid ${tradeMessage.includes('✅') ? '#c3e6cb' : tradeMessage.includes('❌') ? '#f5c6cb' : '#bee5eb'}`,
+            borderRadius: '4px',
+            color: tradeMessage.includes('✅') ? '#155724' : tradeMessage.includes('❌') ? '#721c24' : '#0c5460'
+          }}>
+            {tradeMessage}
+          </div>
+        )}
+
+        {/* Order Entry */}
+        <div style={{
+          display: 'grid',
+          gridTemplateColumns: '1fr 1fr',
+          gap: '15px',
+          marginBottom: '20px'
+        }}>
+          <div>
+            <label style={{ display: 'block', marginBottom: '8px', fontWeight: 'bold' }}>
+              Quantity (KAS):
+            </label>
+            <input
+              type="number"
+              value={tradeQuantity}
+              onChange={(e) => setTradeQuantity(e.target.value)}
+              style={{
+                width: '100%',
+                padding: '10px',
+                fontSize: '16px',
+                border: '1px solid #ccc',
+                borderRadius: '4px'
+              }}
+              disabled={isLoading || !bingxApi}
+            />
+          </div>
+
+          <div>
+            <label style={{ display: 'block', marginBottom: '8px', fontWeight: 'bold' }}>
+              Current Price:
+            </label>
+            <div style={{
+              padding: '10px',
+              fontSize: '18px',
+              fontWeight: 'bold',
+              backgroundColor: '#e9ecef',
+              border: '1px solid #ccc',
+              borderRadius: '4px',
+              color: '#28a745'
+            }}>
+              ${props.bingxData?.price?.toFixed(5) || '--'}
+            </div>
+          </div>
+        </div>
+
+        {/* Trade Buttons */}
+        <div style={{
+          display: 'grid',
+          gridTemplateColumns: '1fr 1fr',
+          gap: '15px',
+          marginBottom: '20px'
+        }}>
+          <button
+            onClick={handleMarketBuy}
+            disabled={isLoading || !bingxApi}
+            style={{
+              padding: '15px',
+              fontSize: '18px',
+              fontWeight: 'bold',
+              backgroundColor: isLoading || !bingxApi ? '#6c757d' : '#28a745',
+              color: 'white',
+              border: 'none',
+              borderRadius: '4px',
+              cursor: isLoading || !bingxApi ? 'not-allowed' : 'pointer',
+              transition: 'background-color 0.2s'
+            }}
+          >
+            {isLoading ? '⏳ Loading...' : '🟢 Market BUY (Long)'}
+          </button>
+
+          <button
+            onClick={handleMarketSell}
+            disabled={isLoading || !bingxApi}
+            style={{
+              padding: '15px',
+              fontSize: '18px',
+              fontWeight: 'bold',
+              backgroundColor: isLoading || !bingxApi ? '#6c757d' : '#dc3545',
+              color: 'white',
+              border: 'none',
+              borderRadius: '4px',
+              cursor: isLoading || !bingxApi ? 'not-allowed' : 'pointer',
+              transition: 'background-color 0.2s'
+            }}
+          >
+            {isLoading ? '⏳ Loading...' : '🔴 Market SELL (Short)'}
+          </button>
+        </div>
+
+        {/* Positions Section */}
+        <div style={{
+          borderTop: '2px solid #dee2e6',
+          paddingTop: '20px'
+        }}>
+          <div style={{
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            marginBottom: '15px'
+          }}>
+            <h4 style={{ margin: 0 }}>Open Positions ({positions.length})</h4>
+            {positions.length > 0 && (
+              <button
+                onClick={handleCloseAllPositions}
+                disabled={isLoading}
+                style={{
+                  padding: '8px 16px',
+                  fontSize: '14px',
+                  fontWeight: 'bold',
+                  backgroundColor: isLoading ? '#6c757d' : '#ffc107',
+                  color: '#000',
+                  border: 'none',
+                  borderRadius: '4px',
+                  cursor: isLoading ? 'not-allowed' : 'pointer'
+                }}
+              >
+                ⚠️ Close All Positions
+              </button>
+            )}
+          </div>
+
+          {positions.length === 0 ? (
+            <div style={{
+              padding: '20px',
+              textAlign: 'center',
+              backgroundColor: '#e9ecef',
+              borderRadius: '4px',
+              color: '#6c757d'
+            }}>
+              No open positions
+            </div>
+          ) : (
+            <div style={{
+              display: 'grid',
+              gap: '10px'
+            }}>
+              {positions.map((position: any, index: number) => {
+                const amt = parseFloat(position.positionAmt || position.availableAmt || '0');
+                const positionSide = amt > 0 ? 'LONG' : 'SHORT';
+                const unrealizedProfit = parseFloat(position.unrealisedProfit || position.unRealizedProfit || '0');
+
+                return (
+                  <div
+                    key={index}
+                    style={{
+                      display: 'grid',
+                      gridTemplateColumns: '100px 80px 120px 120px 1fr auto',
+                      gap: '10px',
+                      alignItems: 'center',
+                      padding: '12px',
+                      backgroundColor: 'white',
+                      border: `2px solid ${positionSide === 'LONG' ? '#28a745' : '#dc3545'}`,
+                      borderRadius: '4px'
+                    }}
+                  >
+                    <div>
+                      <strong>{position.symbol}</strong>
+                    </div>
+                    <div style={{
+                      fontWeight: 'bold',
+                      color: positionSide === 'LONG' ? '#28a745' : '#dc3545'
+                    }}>
+                      {positionSide}
+                    </div>
+                    <div>
+                      Qty: {Math.abs(amt).toFixed(2)}
+                    </div>
+                    <div style={{
+                      fontWeight: 'bold',
+                      color: unrealizedProfit >= 0 ? '#28a745' : '#dc3545'
+                    }}>
+                      PnL: {unrealizedProfit >= 0 ? '+' : ''}{unrealizedProfit.toFixed(2)} USDT
+                    </div>
+                    <div style={{ fontSize: '12px', color: '#666' }}>
+                      Entry: ${parseFloat(position.avgPrice || position.entryPrice || '0').toFixed(5)}
+                    </div>
+                    <button
+                      onClick={() => handleClosePosition(position.symbol, positionSide)}
+                      disabled={isLoading}
+                      style={{
+                        padding: '6px 12px',
+                        fontSize: '13px',
+                        fontWeight: 'bold',
+                        backgroundColor: isLoading ? '#6c757d' : '#007bff',
+                        color: 'white',
+                        border: 'none',
+                        borderRadius: '4px',
+                        cursor: isLoading ? 'not-allowed' : 'pointer'
+                      }}
+                    >
+                      Close
+                    </button>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+
+        {/* Risk Warning */}
+        <div style={{
+          marginTop: '15px',
+          padding: '12px',
+          backgroundColor: '#f8d7da',
+          border: '1px solid #f5c6cb',
+          borderRadius: '4px',
+          fontSize: '13px',
+          color: '#721c24'
+        }}>
+          <strong>⚠️ Risk Warning:</strong> Trading perpetual futures involves significant risk.
+          You may lose your entire investment. BingX does not offer testnet - this is REAL trading.
+          Start with small amounts to test functionality.
         </div>
       </div>
 

@@ -322,7 +322,7 @@ export class BingXAPI {
   }
 
   /**
-   * Get current position
+   * Get current position for a specific symbol
    */
   async getPosition(symbol: string): Promise<any> {
     try {
@@ -338,6 +338,169 @@ export class BingXAPI {
       return positions.find((p: any) => p.symbol === symbol) || null;
     } catch (error) {
       logger.error('BingX API', 'Failed to get position', {
+        error: error instanceof Error ? error.message : String(error)
+      });
+      throw error;
+    }
+  }
+
+  /**
+   * Get all open positions
+   */
+  async getAllPositions(): Promise<any[]> {
+    try {
+      logger.info('BingX API', 'Fetching all positions...');
+
+      const response = await this.request('GET', '/openApi/contract/v1/allPosition', {});
+
+      if (response.code !== 0) {
+        logger.error('BingX API', 'Failed to fetch positions', {
+          code: response.code,
+          msg: response.msg
+        });
+        throw new Error(response.msg || 'Failed to fetch positions');
+      }
+
+      const positions = response.data || [];
+      logger.info('BingX API', 'Positions fetched successfully', {
+        count: positions.length
+      });
+
+      return positions;
+    } catch (error) {
+      logger.error('BingX API', 'Get all positions exception', {
+        error: error instanceof Error ? error.message : String(error)
+      });
+      throw error;
+    }
+  }
+
+  /**
+   * Close a specific position by placing opposite order
+   * @param symbol Trading pair (e.g., 'KAS-USDT')
+   * @param positionSide 'LONG' or 'SHORT'
+   * @param quantity Position size to close (optional, closes all if not specified)
+   */
+  async closePosition(symbol: string, positionSide: 'LONG' | 'SHORT', quantity?: string): Promise<OrderResponse> {
+    try {
+      logger.info('BingX API', 'Closing position...', {
+        symbol,
+        positionSide,
+        quantity
+      });
+
+      // Get current position to determine quantity if not specified
+      if (!quantity) {
+        const position = await this.getPosition(symbol);
+        if (!position) {
+          throw new Error('No open position found');
+        }
+        quantity = Math.abs(parseFloat(position.positionAmt || position.availableAmt || '0')).toString();
+      }
+
+      // Place opposite order to close position
+      // LONG position → SELL order
+      // SHORT position → BUY order
+      const side = positionSide === 'LONG' ? 'Sell' : 'Buy';
+
+      const orderParams: Record<string, any> = {
+        symbol,
+        side: side.toUpperCase(),
+        type: 'MARKET',
+        quantity,
+        positionSide
+      };
+
+      logger.info('BingX API', 'Placing close order...', orderParams);
+
+      const response = await this.request('POST', '/openApi/contract/v1/order', orderParams);
+
+      if (response.code !== 0) {
+        throw new Error(response.msg || 'Failed to close position');
+      }
+
+      logger.info('BingX API', 'Position closed successfully', {
+        orderId: response.data?.orderId
+      });
+
+      return {
+        orderId: response.data?.orderId || '',
+        symbol,
+        side,
+        orderType: 'Market',
+        price: 'Market',
+        qty: quantity,
+        status: 'Closed'
+      };
+    } catch (error) {
+      logger.error('BingX API', 'Failed to close position', {
+        error: error instanceof Error ? error.message : String(error)
+      });
+      throw error;
+    }
+  }
+
+  /**
+   * Close all open positions at once
+   */
+  async closeAllPositions(): Promise<{ success: boolean; message: string }> {
+    try {
+      logger.info('BingX API', 'Closing all positions...');
+
+      // Try using V2 API endpoint for one-click close
+      try {
+        const response = await this.request('POST', '/openApi/swap/v2/trade/closeAllPositions', {});
+
+        if (response.code === 0) {
+          logger.info('BingX API', 'All positions closed successfully (V2 API)');
+          return {
+            success: true,
+            message: 'All positions closed successfully'
+          };
+        }
+      } catch (v2Error) {
+        logger.warn('BingX API', 'V2 close all positions failed, trying manual close', {
+          error: v2Error instanceof Error ? v2Error.message : String(v2Error)
+        });
+      }
+
+      // Fallback: Close positions manually
+      const positions = await this.getAllPositions();
+      const openPositions = positions.filter((p: any) => {
+        const amt = parseFloat(p.positionAmt || p.availableAmt || '0');
+        return amt !== 0;
+      });
+
+      if (openPositions.length === 0) {
+        logger.info('BingX API', 'No open positions to close');
+        return {
+          success: true,
+          message: 'No open positions'
+        };
+      }
+
+      logger.info('BingX API', `Closing ${openPositions.length} positions manually...`);
+
+      // Close each position
+      const closePromises = openPositions.map(async (position: any) => {
+        const symbol = position.symbol;
+        const amt = parseFloat(position.positionAmt || position.availableAmt || '0');
+        const positionSide = amt > 0 ? 'LONG' : 'SHORT';
+        const quantity = Math.abs(amt).toString();
+
+        return this.closePosition(symbol, positionSide, quantity);
+      });
+
+      await Promise.all(closePromises);
+
+      logger.info('BingX API', 'All positions closed successfully (manual)');
+
+      return {
+        success: true,
+        message: `${openPositions.length} position(s) closed successfully`
+      };
+    } catch (error) {
+      logger.error('BingX API', 'Failed to close all positions', {
         error: error instanceof Error ? error.message : String(error)
       });
       throw error;

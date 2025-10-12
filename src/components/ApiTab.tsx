@@ -40,7 +40,18 @@ export function ApiTab() {
   }, []);
 
   const handleSave = () => {
+    // Save to general config
     localStorage.setItem('apiConfig', JSON.stringify(config));
+
+    // Also save to exchange-specific config for backward compatibility
+    if (config.exchange === 'bingx') {
+      localStorage.setItem('bingx_api_config', JSON.stringify({
+        apiKey: config.apiKey,
+        apiSecret: config.apiSecret,
+        testnet: config.testnet
+      }));
+    }
+
     setStatus({ connected: false, message: '✅ Saved! Click "Test Connection" to verify.' });
   };
 
