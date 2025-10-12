@@ -74,7 +74,7 @@ export function SettingsTab() {
               checked={settings.showArbitrageAlerts}
               onChange={(e) => setSettings({ ...settings, showArbitrageAlerts: e.target.checked })}
             />
-            Show arbitrage alerts
+            Show price spread alerts
           </label>
         </div>
         <div className="form-group checkbox-group">
@@ -124,7 +124,7 @@ export function SettingsTab() {
             />
             Auto-trade (Coming Soon)
           </label>
-          <small>⚠️ Automatically execute arbitrage when opportunities detected</small>
+          <small>⚠️ Automatically execute trades when spread opportunities detected</small>
         </div>
       </div>
 

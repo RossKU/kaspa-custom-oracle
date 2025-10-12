@@ -244,7 +244,7 @@ function App() {
       </main>
 
       <footer className="footer">
-        <p>Kaspa Arbitrage System v0.6.0 - 6 Exchanges | Tab Navigation</p>
+        <p>Kaspa Oracle v0.6.0 - 6 Exchanges | Multi-Tab Interface</p>
       </footer>
     </div>
   )

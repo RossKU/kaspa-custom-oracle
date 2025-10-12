@@ -1,7 +1,7 @@
 export function TradeTab() {
   return (
     <section className="tab-content trade-tab">
-      <h2>⚡ Arbitrage Trading</h2>
+      <h2>⚡ Trading</h2>
 
       <div className="coming-soon-box">
         <h3>🚧 Coming Soon</h3>
@@ -10,7 +10,7 @@ export function TradeTab() {
         <div className="planned-features">
           <h4>Planned Features:</h4>
           <ul>
-            <li>✅ Real-time arbitrage opportunity detection</li>
+            <li>✅ Real-time price spread detection</li>
             <li>✅ Manual trade execution</li>
             <li>✅ Fee calculation and net profit display</li>
             <li>✅ Risk management checks</li>
@@ -25,16 +25,15 @@ export function TradeTab() {
           <ol>
             <li>Go to <strong>API</strong> tab and connect your Bybit Testnet account</li>
             <li>Monitor price spreads in <strong>Price</strong> tab</li>
-            <li>Manual arbitrage execution coming in next update</li>
+            <li>Manual trade execution coming in next update</li>
           </ol>
         </div>
 
         <div className="info-box">
-          <h4>💡 What is Arbitrage?</h4>
+          <h4>💡 Trading Strategy</h4>
           <p>
-            Arbitrage is buying an asset on one exchange at a lower price and
-            simultaneously selling it on another exchange at a higher price,
-            profiting from the price difference (spread).
+            Monitor price differences across exchanges and execute trades
+            to capture spread opportunities between markets.
           </p>
           <p>
             <strong>Example:</strong> Buy KAS on Binance @ $0.05612,
