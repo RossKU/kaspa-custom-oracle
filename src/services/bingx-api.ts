@@ -217,8 +217,8 @@ export class BingXAPI {
         testnet: this.config.testnet
       });
 
-      // Use balance endpoint to test connection
-      const response = await this.request('GET', '/openApi/contract/v1/balance', {});
+      // Use Perpetual Swap balance endpoint to test connection
+      const response = await this.request('GET', '/openApi/swap/v2/user/balance', {});
 
       const success = response.code === 0;
       if (success) {
@@ -246,7 +246,8 @@ export class BingXAPI {
     try {
       logger.info('BingX API', 'Fetching account balance...');
 
-      const response = await this.request('GET', '/openApi/contract/v1/balance', {});
+      // Use Perpetual Swap balance endpoint (V2 API)
+      const response = await this.request('GET', '/openApi/swap/v2/user/balance', {});
 
       if (response.code !== 0) {
         logger.error('BingX API', 'Failed to fetch balance', {
