@@ -3,6 +3,8 @@ import { BinancePriceMonitor } from './services/binance'
 import { MexcPriceMonitor, type MexcPriceData } from './services/mexc'
 import { BybitPriceMonitor, type BybitPriceData } from './services/bybit'
 import { GateioPriceMonitor, type GateioPriceData } from './services/gateio'
+import { KucoinPriceMonitor, type KucoinPriceData } from './services/kucoin'
+import { BingXPriceMonitor, type BingXPriceData } from './services/bingx'
 import type { PriceData } from './types/binance'
 import './App.css'
 
@@ -11,6 +13,8 @@ function App() {
   const [mexcData, setMexcData] = useState<MexcPriceData | null>(null)
   const [bybitData, setBybitData] = useState<BybitPriceData | null>(null)
   const [gateioData, setGateioData] = useState<GateioPriceData | null>(null)
+  const [kucoinData, setKucoinData] = useState<KucoinPriceData | null>(null)
+  const [bingxData, setBingxData] = useState<BingXPriceData | null>(null)
   const [isConnecting, setIsConnecting] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [lastUpdateTime, setLastUpdateTime] = useState<string>('')
@@ -18,6 +22,8 @@ function App() {
   const mexcMonitorRef = useRef<MexcPriceMonitor | null>(null)
   const bybitMonitorRef = useRef<BybitPriceMonitor | null>(null)
   const gateioMonitorRef = useRef<GateioPriceMonitor | null>(null)
+  const kucoinMonitorRef = useRef<KucoinPriceMonitor | null>(null)
+  const bingxMonitorRef = useRef<BingXPriceMonitor | null>(null)
 
   // Binance WebSocket
   useEffect(() => {
@@ -106,6 +112,48 @@ function App() {
     }
   }, [])
 
+  // Kucoin WebSocket
+  useEffect(() => {
+    const monitor = new KucoinPriceMonitor()
+    kucoinMonitorRef.current = monitor
+
+    monitor.connect(
+      (data) => {
+        setKucoinData(data)
+        setLastUpdateTime(new Date().toLocaleTimeString())
+      },
+      (errorMsg) => {
+        console.error('[App] Kucoin error:', errorMsg)
+      }
+    )
+
+    return () => {
+      monitor.disconnect()
+      kucoinMonitorRef.current = null
+    }
+  }, [])
+
+  // BingX WebSocket
+  useEffect(() => {
+    const monitor = new BingXPriceMonitor()
+    bingxMonitorRef.current = monitor
+
+    monitor.connect(
+      (data) => {
+        setBingxData(data)
+        setLastUpdateTime(new Date().toLocaleTimeString())
+      },
+      (errorMsg) => {
+        console.error('[App] BingX error:', errorMsg)
+      }
+    )
+
+    return () => {
+      monitor.disconnect()
+      bingxMonitorRef.current = null
+    }
+  }, [])
+
   return (
     <div className="app">
       <header className="header">
@@ -125,7 +173,7 @@ function App() {
           {isConnecting && <p className="loading-message">Connecting to exchanges...</p>}
           {error && <p className="error-message">{error}</p>}
 
-          {(binanceData || mexcData || bybitData || gateioData) && (
+          {(binanceData || mexcData || bybitData || gateioData || kucoinData || bingxData) && (
             <table className="price-table">
               <thead>
                 <tr>
@@ -173,6 +221,24 @@ function App() {
                     <td className="ask">${gateioData.ask.toFixed(7)}</td>
                   </tr>
                 )}
+                {kucoinData && (
+                  <tr>
+                    <td>Kucoin</td>
+                    <td className="type-futures">F</td>
+                    <td className="price">${kucoinData.price.toFixed(7)}</td>
+                    <td className="bid">${kucoinData.bid.toFixed(7)}</td>
+                    <td className="ask">${kucoinData.ask.toFixed(7)}</td>
+                  </tr>
+                )}
+                {bingxData && (
+                  <tr>
+                    <td>BingX</td>
+                    <td className="type-futures">F</td>
+                    <td className="price">${bingxData.price.toFixed(7)}</td>
+                    <td className="bid">${bingxData.bid.toFixed(7)}</td>
+                    <td className="ask">${bingxData.ask.toFixed(7)}</td>
+                  </tr>
+                )}
               </tbody>
             </table>
           )}
@@ -180,7 +246,7 @@ function App() {
       </main>
 
       <footer className="footer">
-        <p>Kaspa Custom Oracle v0.4.0 - 4 Exchanges</p>
+        <p>Kaspa Custom Oracle v0.5.0 - 6 Exchanges</p>
       </footer>
     </div>
   )

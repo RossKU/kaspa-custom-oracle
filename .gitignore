@@ -22,3 +22,7 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# Session files (may contain tokens)
+*-claudecli*.txt
+*session*.txt
