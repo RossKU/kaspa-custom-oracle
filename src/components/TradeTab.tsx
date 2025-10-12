@@ -1,9 +1,24 @@
 import { useState, useEffect } from 'react';
 import { TRADE_PASSWORD, SESSION_TIMEOUT } from '../types/trade';
 import type { TradeAuthState } from '../types/trade';
+import type { PriceData } from '../types/binance';
+import type { MexcPriceData } from '../services/mexc';
+import type { BybitPriceData } from '../services/bybit';
+import type { GateioPriceData } from '../services/gateio';
+import type { KucoinPriceData } from '../services/kucoin';
+import type { BingXPriceData } from '../services/bingx';
 import { logger } from '../utils/logger';
 
-export function TradeTab() {
+interface TradeTabProps {
+  binanceData: PriceData | null;
+  mexcData: MexcPriceData | null;
+  bybitData: BybitPriceData | null;
+  gateioData: GateioPriceData | null;
+  kucoinData: KucoinPriceData | null;
+  bingxData: BingXPriceData | null;
+}
+
+export function TradeTab(props: TradeTabProps) {
   const [authState, setAuthState] = useState<TradeAuthState>({
     isAuthenticated: false,
     lastAuthTime: null,
@@ -12,6 +27,36 @@ export function TradeTab() {
 
   const [passwordInput, setPasswordInput] = useState('');
   const [errorMessage, setErrorMessage] = useState('');
+
+  // Exchange selection state
+  const [exchangeA, setExchangeA] = useState('Bybit');
+  const [exchangeB, setExchangeB] = useState('BingX');
+
+  // Get price from exchange name
+  const getPrice = (exchange: string): number | null => {
+    switch (exchange) {
+      case 'Binance': return props.binanceData?.price || null;
+      case 'MEXC': return props.mexcData?.lastPrice || null;
+      case 'Bybit': return props.bybitData?.lastPrice || null;
+      case 'Gate.io': return props.gateioData?.price || null;
+      case 'Kucoin': return props.kucoinData?.lastPrice || null;
+      case 'BingX': return props.bingxData?.lastPrice || null;
+      default: return null;
+    }
+  };
+
+  // Calculate Gap as percentage
+  const calculateGap = (priceA: number | null, priceB: number | null): string => {
+    if (!priceA || !priceB || priceB === 0) return '--';
+    const gap = ((priceA - priceB) / priceB) * 100;
+    return gap.toFixed(3);
+  };
+
+  // Calculate gaps for both directions
+  const priceA = getPrice(exchangeA);
+  const priceB = getPrice(exchangeB);
+  const gapABuyBSell = calculateGap(priceA, priceB); // A買いB売り
+  const gapBBuyASell = calculateGap(priceB, priceA); // B買いA売り
 
   // Check session timeout
   useEffect(() => {
@@ -200,10 +245,14 @@ export function TradeTab() {
 
           <div style={{ display: 'grid', gridTemplateColumns: '120px 150px', gap: '10px', alignItems: 'center', marginBottom: '8px' }}>
             <label>取引所A:</label>
-            <select style={{ padding: '4px', border: '1px solid #ccc' }}>
+            <select
+              value={exchangeA}
+              onChange={(e) => setExchangeA(e.target.value)}
+              style={{ padding: '4px', border: '1px solid #ccc' }}
+            >
               <option>Binance</option>
               <option>MEXC</option>
-              <option selected>Bybit</option>
+              <option>Bybit</option>
               <option>Gate.io</option>
               <option>Kucoin</option>
               <option>BingX</option>
@@ -212,8 +261,12 @@ export function TradeTab() {
 
           <div style={{ display: 'grid', gridTemplateColumns: '120px 150px', gap: '10px', alignItems: 'center', marginBottom: '8px' }}>
             <label>取引所B:</label>
-            <select style={{ padding: '4px', border: '1px solid #ccc' }}>
-              <option selected>Binance</option>
+            <select
+              value={exchangeB}
+              onChange={(e) => setExchangeB(e.target.value)}
+              style={{ padding: '4px', border: '1px solid #ccc' }}
+            >
+              <option>Binance</option>
               <option>MEXC</option>
               <option>Bybit</option>
               <option>Gate.io</option>
@@ -299,7 +352,19 @@ export function TradeTab() {
               <input type="number" defaultValue="0" style={{ width: '50px', padding: '4px', border: '1px solid #ccc' }} />
               <input type="number" defaultValue="0.2" step="0.1" style={{ width: '50px', padding: '4px', border: '1px solid #ccc' }} />
               <span>% OUT</span>
-              <input type="number" defaultValue="-0.6" step="0.1" style={{ width: '60px', padding: '4px', border: '1px solid #ccc' }} />
+              <input
+                type="text"
+                value={gapABuyBSell}
+                readOnly
+                style={{
+                  width: '60px',
+                  padding: '4px',
+                  border: '1px solid #ccc',
+                  backgroundColor: '#f0f0f0',
+                  color: parseFloat(gapABuyBSell) < 0 ? '#dc3545' : parseFloat(gapABuyBSell) > 0 ? '#28a745' : '#666',
+                  fontWeight: '600'
+                }}
+              />
               <span style={{ fontSize: '11px', color: '#666' }}>Gap</span>
               <input type="number" defaultValue="0" style={{ width: '40px', padding: '4px', border: '1px solid #ccc' }} />
               <select style={{ width: '70px', padding: '4px', border: '1px solid #ccc' }}>
@@ -322,7 +387,19 @@ export function TradeTab() {
               <input type="number" defaultValue="0" style={{ width: '50px', padding: '4px', border: '1px solid #ccc' }} />
               <input type="number" defaultValue="0.2" step="0.1" style={{ width: '50px', padding: '4px', border: '1px solid #ccc' }} />
               <span>% OUT</span>
-              <input type="number" defaultValue="-0.7" step="0.1" style={{ width: '60px', padding: '4px', border: '1px solid #ccc' }} />
+              <input
+                type="text"
+                value={gapBBuyASell}
+                readOnly
+                style={{
+                  width: '60px',
+                  padding: '4px',
+                  border: '1px solid #ccc',
+                  backgroundColor: '#f0f0f0',
+                  color: parseFloat(gapBBuyASell) < 0 ? '#dc3545' : parseFloat(gapBBuyASell) > 0 ? '#28a745' : '#666',
+                  fontWeight: '600'
+                }}
+              />
               <span style={{ fontSize: '11px', color: '#666' }}>Gap</span>
               <input type="number" defaultValue="0" style={{ width: '40px', padding: '4px', border: '1px solid #ccc' }} />
               <select style={{ width: '70px', padding: '4px', border: '1px solid #ccc' }}>

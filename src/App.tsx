@@ -238,7 +238,16 @@ function App() {
           />
         )}
         {activeTab === 'api' && <ApiTab />}
-        {activeTab === 'trade' && <TradeTab />}
+        {activeTab === 'trade' && (
+          <TradeTab
+            binanceData={binanceData}
+            mexcData={mexcData}
+            bybitData={bybitData}
+            gateioData={gateioData}
+            kucoinData={kucoinData}
+            bingxData={bingxData}
+          />
+        )}
         {activeTab === 'settings' && <SettingsTab />}
         {activeTab === 'debug' && <DebugTab debugLogs={debugLogs} />}
       </main>
