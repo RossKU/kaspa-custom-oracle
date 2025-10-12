@@ -279,11 +279,14 @@ export class BybitAPI {
         side: params.side,
         orderType: params.orderType,
         qty: params.qty,
+        positionIdx: 0, // 0 = one-way mode (default for most accounts)
       };
 
       if (params.orderType === 'Limit' && params.price) {
         orderParams.price = params.price;
       }
+
+      logger.info('Bybit API', 'Attempting to place order with params', orderParams);
 
       const response = await this.request('POST', '/v5/order/create', orderParams);
 
@@ -300,12 +303,20 @@ export class BybitAPI {
         let errorMessage = response.retMsg || 'Failed to place order';
 
         if (response.retCode === 10005) {
-          errorMessage = '❌ API Key Permission Error: Your Bybit API key does not have "Contract Trade" permission enabled. Please:\n\n' +
-            '1. Go to Bybit Demo Trading (bybit.com)\n' +
-            '2. API Management → Create new API key\n' +
-            '3. Enable "Contract Trade" permission\n' +
-            '4. Update API keys in the API Tab\n\n' +
-            `Original error: ${response.retMsg}`;
+          errorMessage = '❌ API Key Permission Error (10005)\n\n' +
+            'Possible causes:\n' +
+            '1. API key missing "Contract - Trade" permission\n' +
+            '2. Added permission to existing key (need to create NEW key)\n' +
+            '3. API key just created (wait 2-3 minutes for activation)\n\n' +
+            'Solution:\n' +
+            '→ Delete old API key\n' +
+            '→ Create NEW API key with these permissions:\n' +
+            '   ✅ Contract - Trade (必須!)\n' +
+            '   ✅ Contract - Order & Position\n' +
+            '   ✅ Unified Trading - Trade\n' +
+            '→ Wait 2-3 minutes after creation\n' +
+            '→ Update in API Tab\n\n' +
+            `Original: ${response.retMsg}`;
         } else if (response.retCode === 10004) {
           errorMessage = '❌ Invalid API Signature. Please check your API Secret.';
         } else if (response.retCode === 10003) {
@@ -433,6 +444,7 @@ export class BybitAPI {
         side: closeSide,
         orderType: 'Market',
         qty: closeQty,
+        positionIdx: 0, // 0 = one-way mode
         reduceOnly: true  // Important: This ensures we're closing, not opening new position
       };
 
