@@ -69,3 +69,78 @@ section h2 {
 .footer p {
   margin: 0;
 }
+
+/* Price Grid */
+.price-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 1rem;
+  margin-top: 1rem;
+}
+
+.price-item {
+  display: flex;
+  flex-direction: column;
+  padding: 1rem;
+  background: #f8f9fa;
+  border-radius: 6px;
+  border: 1px solid #e9ecef;
+}
+
+.price-item.large {
+  grid-column: 1 / -1;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  align-items: center;
+  padding: 1.5rem;
+}
+
+.price-item .label {
+  font-size: 0.85rem;
+  color: #666;
+  margin-bottom: 0.5rem;
+}
+
+.price-item.large .label {
+  color: rgba(255, 255, 255, 0.9);
+}
+
+.price-item .value {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: #333;
+}
+
+.price-item.large .value {
+  font-size: 2.5rem;
+  color: white;
+  margin: 0.5rem 0;
+}
+
+.price-item .change {
+  font-size: 1rem;
+  font-weight: 600;
+  margin-top: 0.5rem;
+}
+
+.change.positive {
+  color: #28a745;
+}
+
+.change.negative {
+  color: #dc3545;
+}
+
+.price-item.large .change {
+  color: rgba(255, 255, 255, 0.95);
+}
+
+@media (max-width: 768px) {
+  .price-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .price-item.large .value {
+    font-size: 2rem;
+  }
+}
