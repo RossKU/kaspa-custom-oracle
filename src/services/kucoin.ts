@@ -79,7 +79,7 @@ export class KucoinPriceMonitor {
 
           // Handle welcome message
           if (message.type === 'welcome') {
-            console.log('[Kucoin] Welcome message received');
+            console.log('[Kucoin] ✅ Welcome message received');
           }
 
           // Handle pong
@@ -87,12 +87,18 @@ export class KucoinPriceMonitor {
             console.log('[Kucoin] Pong received');
           }
 
+          // Handle ack message (subscription confirmation)
+          if (message.type === 'ack') {
+            console.log('[Kucoin] ✅ Subscription acknowledged:', message);
+          }
+
           // Handle ticker data
           if (message.type === 'message' && message.topic === '/market/ticker:KASUSDTM') {
+            console.log('[Kucoin] 📊 Ticker data received:', message.data);
             this.handleTickerData(message.data);
           }
         } catch (error) {
-          console.error('[Kucoin] Parse error:', error);
+          console.error('[Kucoin] ❌ Parse error:', error, event.data);
           this.onErrorCallback?.('Failed to parse ticker data');
         }
       };
@@ -123,26 +129,34 @@ export class KucoinPriceMonitor {
 
   private async fetchToken() {
     try {
+      console.log('[Kucoin] Fetching token from:', TOKEN_API);
+
       const response = await fetch(TOKEN_API, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        }
+        method: 'POST'
+        // Remove Content-Type header to avoid CORS preflight
       });
 
+      console.log('[Kucoin] Token response status:', response.status);
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
       const data: KucoinTokenResponse = await response.json();
+      console.log('[Kucoin] Token response:', data);
 
       if (data.code === '200000' && data.data) {
         this.token = data.data.token;
         // Use first available server
         this.endpoint = data.data.instanceServers[0].endpoint;
-        console.log('[Kucoin] Token obtained:', this.token.substring(0, 20) + '...');
-        console.log('[Kucoin] Endpoint:', this.endpoint);
+        console.log('[Kucoin] ✅ Token obtained:', this.token.substring(0, 20) + '...');
+        console.log('[Kucoin] ✅ Endpoint:', this.endpoint);
       } else {
-        throw new Error('Invalid token response');
+        throw new Error(`Invalid token response: ${data.code}`);
       }
     } catch (error) {
-      console.error('[Kucoin] Token fetch error:', error);
+      console.error('[Kucoin] ❌ Token fetch error:', error);
+      this.onErrorCallback?.(`Token fetch failed: ${error}`);
       throw error;
     }
   }
