@@ -1096,7 +1096,8 @@ export function TradeTab(props: TradeTabProps) {
             backgroundColor: bybitTradeMessage.includes('✅') ? '#d4edda' : bybitTradeMessage.includes('❌') ? '#f8d7da' : '#d1ecf1',
             border: `1px solid ${bybitTradeMessage.includes('✅') ? '#c3e6cb' : bybitTradeMessage.includes('❌') ? '#f5c6cb' : '#bee5eb'}`,
             borderRadius: '4px',
-            color: bybitTradeMessage.includes('✅') ? '#155724' : bybitTradeMessage.includes('❌') ? '#721c24' : '#0c5460'
+            color: bybitTradeMessage.includes('✅') ? '#155724' : bybitTradeMessage.includes('❌') ? '#721c24' : '#0c5460',
+            whiteSpace: 'pre-wrap'
           }}>
             {bybitTradeMessage}
           </div>

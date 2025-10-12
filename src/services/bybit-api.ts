@@ -288,8 +288,39 @@ export class BybitAPI {
       const response = await this.request('POST', '/v5/order/create', orderParams);
 
       if (response.retCode !== 0) {
-        throw new Error(response.retMsg || 'Failed to place order');
+        // Log detailed error information for debugging
+        logger.error('Bybit API', 'Order creation failed - Full response', {
+          retCode: response.retCode,
+          retMsg: response.retMsg,
+          result: response.result,
+          retExtInfo: response.retExtInfo
+        });
+
+        // Provide user-friendly error messages for common issues
+        let errorMessage = response.retMsg || 'Failed to place order';
+
+        if (response.retCode === 10005) {
+          errorMessage = '❌ API Key Permission Error: Your Bybit API key does not have "Contract Trade" permission enabled. Please:\n\n' +
+            '1. Go to Bybit Demo Trading (bybit.com)\n' +
+            '2. API Management → Create new API key\n' +
+            '3. Enable "Contract Trade" permission\n' +
+            '4. Update API keys in the API Tab\n\n' +
+            `Original error: ${response.retMsg}`;
+        } else if (response.retCode === 10004) {
+          errorMessage = '❌ Invalid API Signature. Please check your API Secret.';
+        } else if (response.retCode === 10003) {
+          errorMessage = '❌ Invalid API Key. Please verify your API Key.';
+        }
+
+        throw new Error(errorMessage);
       }
+
+      logger.info('Bybit API', 'Order placed successfully', {
+        orderId: response.result.orderId,
+        symbol: params.symbol,
+        side: params.side,
+        qty: params.qty
+      });
 
       return {
         orderId: response.result.orderId,
