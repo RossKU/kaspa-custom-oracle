@@ -799,11 +799,18 @@ export function TradeTab(props: TradeTabProps) {
               />
               <span style={{ fontSize: '11px', color: '#666' }}>Gap</span>
               <input type="number" defaultValue="0" style={{ width: '40px', padding: '4px', border: '1px solid #ccc' }} />
-              <select style={{ width: '70px', padding: '4px', border: '1px solid #ccc' }}>
-                <option>300</option>
-                <option>600</option>
-                <option selected>900</option>
-              </select>
+              <input
+                type="number"
+                list="trigger-duration-a"
+                defaultValue="900"
+                style={{ width: '70px', padding: '4px', border: '1px solid #ccc' }}
+                placeholder="900"
+              />
+              <datalist id="trigger-duration-a">
+                <option value="300">300ms</option>
+                <option value="600">600ms</option>
+                <option value="900">900ms</option>
+              </datalist>
               <span style={{ fontSize: '11px', background: '#e9ecef', padding: '4px 8px', border: '1px solid #ccc' }}>S左M両</span>
               <button style={{ padding: '4px 8px', border: '1px solid #999', background: '#d4edda', cursor: 'pointer', fontSize: '11px' }}>自動</button>
             </div>
@@ -834,11 +841,18 @@ export function TradeTab(props: TradeTabProps) {
               />
               <span style={{ fontSize: '11px', color: '#666' }}>Gap</span>
               <input type="number" defaultValue="0" style={{ width: '40px', padding: '4px', border: '1px solid #ccc' }} />
-              <select style={{ width: '70px', padding: '4px', border: '1px solid #ccc' }}>
-                <option>300</option>
-                <option>600</option>
-                <option selected>900</option>
-              </select>
+              <input
+                type="number"
+                list="trigger-duration-b"
+                defaultValue="900"
+                style={{ width: '70px', padding: '4px', border: '1px solid #ccc' }}
+                placeholder="900"
+              />
+              <datalist id="trigger-duration-b">
+                <option value="300">300ms</option>
+                <option value="600">600ms</option>
+                <option value="900">900ms</option>
+              </datalist>
               <span style={{ fontSize: '11px', background: '#e9ecef', padding: '4px 8px', border: '1px solid #ccc' }}>M右S両</span>
               <button style={{ padding: '4px 8px', border: '1px solid #999', background: '#d4edda', cursor: 'pointer', fontSize: '11px' }}>自動</button>
             </div>
