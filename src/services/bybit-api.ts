@@ -380,12 +380,15 @@ export class BybitAPI {
       });
 
       // Get current position to determine quantity if not specified
+      let closeQty: string;
       if (!quantity) {
         const position = await this.getPosition(symbol);
         if (!position) {
           throw new Error('No open position found');
         }
-        quantity = position.size;
+        closeQty = position.size;
+      } else {
+        closeQty = quantity;
       }
 
       // Place opposite order to close position
@@ -398,7 +401,7 @@ export class BybitAPI {
         symbol,
         side: closeSide,
         orderType: 'Market',
-        qty: quantity,
+        qty: closeQty,
         reduceOnly: true  // Important: This ensures we're closing, not opening new position
       };
 
@@ -420,7 +423,7 @@ export class BybitAPI {
         side: closeSide,
         orderType: 'Market',
         price: 'Market',
-        qty: quantity,
+        qty: closeQty,
         status: 'Closed'
       };
     } catch (error) {
