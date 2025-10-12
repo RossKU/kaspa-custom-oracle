@@ -104,7 +104,7 @@ export class BingXAPI {
     logger.info('BingX API', `Request ${method} ${endpoint}`, { params });
 
     // Add timestamp and recvWindow to params
-    const allParams = {
+    const allParams: Record<string, any> = {
       ...params,
       timestamp,
       recvWindow
