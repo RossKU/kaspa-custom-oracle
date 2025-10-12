@@ -27,18 +27,6 @@ export function ApiTab() {
 
   // Load from localStorage
   useEffect(() => {
-    // ⚠️ TEMPORARY: Hardcoded Production Demo Trading API keys - REMOVE BEFORE COMMIT!
-    const TEMP_TEST_CONFIG = {
-      exchange: 'bybit',
-      apiKey: 'bgmGYEfrJxvOEU5MNs',
-      apiSecret: 'qG9c8UHs1yM9IXEb9VyPPXCgNfS55vqGvwCU',
-      testnet: true  // Will use Demo Trading endpoint when true
-    };
-
-    setConfig(TEMP_TEST_CONFIG);
-    logger.warn('API Tab', '⚠️ Using HARDCODED Production Demo Trading API keys - FOR DEBUGGING ONLY!', TEMP_TEST_CONFIG);
-
-    /* Original code - temporarily disabled
     const saved = localStorage.getItem('apiConfig');
     if (saved) {
       try {
@@ -48,7 +36,6 @@ export function ApiTab() {
         // Invalid saved data
       }
     }
-    */
   }, []);
 
   const handleSave = () => {
@@ -105,7 +92,7 @@ export function ApiTab() {
 
       setStatus({
         connected: true,
-        message: `✅ Connected to Bybit ${config.testnet ? 'Testnet' : 'Mainnet'}`,
+        message: `✅ Connected to Bybit ${config.testnet ? 'Demo Trading' : 'Production'}`,
         balance
       });
     } catch (error) {
@@ -176,7 +163,7 @@ export function ApiTab() {
               checked={config.testnet}
               onChange={(e) => setConfig({ ...config, testnet: e.target.checked })}
             />
-            Use Testnet (Demo Trading - Recommended)
+            Use Demo Trading (Recommended)
           </label>
         </div>
       </div>
@@ -205,16 +192,21 @@ export function ApiTab() {
       </div>
 
       <div className="info-box">
-        <h4>ℹ️ How to get Bybit API keys:</h4>
+        <h4>ℹ️ How to get Bybit Demo Trading API keys:</h4>
         <ol>
-          <li>Go to <a href="https://testnet.bybit.com" target="_blank" rel="noopener noreferrer">Bybit Testnet</a></li>
-          <li>Create an account (free, no KYC required)</li>
+          <li>Go to <a href="https://www.bybit.com" target="_blank" rel="noopener noreferrer">Bybit</a> (Production site)</li>
+          <li>Create an account (free)</li>
+          <li>Switch to <strong>Demo Trading</strong> mode (hover on profile → Demo Trading)</li>
           <li>Go to API Management</li>
-          <li>Create new API key with "Trade" permission</li>
+          <li>Create new API key with "Contract Account" or "Unified Trading" permission</li>
           <li>Copy API Key and Secret here</li>
+          <li>Check "Use Demo Trading" checkbox above</li>
         </ol>
         <p className="warning">
           ⚠️ Never share your API keys! They are stored locally in your browser.
+        </p>
+        <p style={{marginTop: '1rem', fontSize: '0.9rem', color: '#666'}}>
+          💡 Demo Trading uses virtual funds but real market liquidity - perfect for safe testing!
         </p>
       </div>
     </section>
