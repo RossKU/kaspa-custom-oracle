@@ -1,34 +1,41 @@
-import { useState } from 'react'
-import reactLogo from './assets/react.svg'
-import viteLogo from '/vite.svg'
 import './App.css'
 
 function App() {
-  const [count, setCount] = useState(0)
-
   return (
-    <>
-      <div>
-        <a href="https://vite.dev" target="_blank">
-          <img src={viteLogo} className="logo" alt="Vite logo" />
-        </a>
-        <a href="https://react.dev" target="_blank">
-          <img src={reactLogo} className="logo react" alt="React logo" />
-        </a>
-      </div>
-      <h1>Vite + React</h1>
-      <div className="card">
-        <button onClick={() => setCount((count) => count + 1)}>
-          count is {count}
-        </button>
-        <p>
-          Edit <code>src/App.tsx</code> and save to test HMR
-        </p>
-      </div>
-      <p className="read-the-docs">
-        Click on the Vite and React logos to learn more
-      </p>
-    </>
+    <div className="app">
+      <header className="header">
+        <h1>Kaspa Custom Oracle</h1>
+        <p>Arbitrage Monitoring System</p>
+      </header>
+
+      <main className="main">
+        <section className="status-panel">
+          <h2>System Status</h2>
+          <div className="status-item">
+            <span>Connection:</span>
+            <span className="status-value">Disconnected</span>
+          </div>
+          <div className="status-item">
+            <span>Monitoring:</span>
+            <span className="status-value">Inactive</span>
+          </div>
+        </section>
+
+        <section className="price-panel">
+          <h2>Price Monitor</h2>
+          <p>No data available</p>
+        </section>
+
+        <section className="opportunity-panel">
+          <h2>Arbitrage Opportunities</h2>
+          <p>Waiting for data...</p>
+        </section>
+      </main>
+
+      <footer className="footer">
+        <p>Kaspa Custom Oracle v0.1.0</p>
+      </footer>
+    </div>
   )
 }
 
