@@ -1,13 +1,14 @@
 // Gate.io Futures WebSocket V4
 const GATEIO_WS_URL = 'wss://fx-ws.gateio.ws/v4/ws/usdt';
 
-interface GateioTickerData {
-  contract: string;
-  last: string;
-  bid1_size: number;
-  ask1_size: number;
-  bid1_price: string;
-  ask1_price: string;
+interface GateioBookTickerData {
+  t: number;
+  u: number;
+  s: string;
+  b: string;  // best bid price
+  B: number;  // best bid size
+  a: string;  // best ask price
+  A: number;  // best ask size
 }
 
 export interface GateioPriceData {
@@ -23,7 +24,6 @@ export class GateioPriceMonitor {
   private onDataCallback: ((data: GateioPriceData) => void) | null = null;
   private onErrorCallback: ((error: string) => void) | null = null;
   private pingInterval: number | null = null;
-  private lastPriceData: GateioPriceData | null = null;
 
   connect(
     onData: (data: GateioPriceData) => void,
@@ -39,8 +39,8 @@ export class GateioPriceMonitor {
     this.ws.onopen = () => {
       console.log('[Gate.io] ✅ Connected!');
 
-      // Subscribe to KAS_USDT ticker
-      this.subscribeTicker();
+      // Subscribe to KAS_USDT book_ticker (bid/ask)
+      this.subscribeBookTicker();
 
       // Start ping interval (every 30 seconds)
       this.pingInterval = window.setInterval(() => {
@@ -53,9 +53,9 @@ export class GateioPriceMonitor {
         const message = JSON.parse(event.data);
         console.log('[Gate.io] Received:', message);
 
-        // Handle ticker data
-        if (message.channel === 'futures.tickers' && message.event === 'update' && message.result) {
-          this.handleTickerData(message.result);
+        // Handle book_ticker data
+        if (message.channel === 'futures.book_ticker' && message.event === 'update' && message.result) {
+          this.handleBookTickerData(message.result);
         }
       } catch (error) {
         console.error('[Gate.io] Parse error:', error);
@@ -85,15 +85,15 @@ export class GateioPriceMonitor {
     };
   }
 
-  private subscribeTicker() {
+  private subscribeBookTicker() {
     const subscribeMessage = {
       time: Math.floor(Date.now() / 1000),
-      channel: 'futures.tickers',
+      channel: 'futures.book_ticker',
       event: 'subscribe',
       payload: ['KAS_USDT']
     };
 
-    console.log('[Gate.io] Subscribing to ticker:', subscribeMessage);
+    console.log('[Gate.io] Subscribing to book_ticker:', subscribeMessage);
     this.ws?.send(JSON.stringify(subscribeMessage));
   }
 
@@ -105,11 +105,12 @@ export class GateioPriceMonitor {
     this.ws?.send(JSON.stringify(pingMessage));
   }
 
-  private handleTickerData(data: GateioTickerData) {
-    // Use previous values if current data is undefined (delta updates)
-    const price = data.last ? parseFloat(data.last) : (this.lastPriceData?.price ?? 0);
-    const bid = data.bid1_price ? parseFloat(data.bid1_price) : (this.lastPriceData?.bid ?? 0);
-    const ask = data.ask1_price ? parseFloat(data.ask1_price) : (this.lastPriceData?.ask ?? 0);
+  private handleBookTickerData(data: GateioBookTickerData) {
+    const bid = parseFloat(data.b);
+    const ask = parseFloat(data.a);
+
+    // Calculate mid price from bid and ask
+    const price = (bid + ask) / 2;
 
     const priceData: GateioPriceData = {
       exchange: 'Gate.io',
@@ -118,9 +119,6 @@ export class GateioPriceMonitor {
       bid,
       ask
     };
-
-    // Store for next delta update
-    this.lastPriceData = priceData;
 
     console.log('[Gate.io] Parsed price data:', priceData);
     this.onDataCallback?.(priceData);
