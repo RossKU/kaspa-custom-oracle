@@ -21,12 +21,12 @@ interface KucoinTokenResponse {
 
 interface KucoinTickerData {
   symbol: string;
-  bestBidPrice: string;
-  bestAskPrice: string;
-  price: string;
+  bestBidPrice: number;
+  bestAskPrice: number;
   bestBidSize: number;
   bestAskSize: number;
   ts: number;
+  // Note: tickerV2 does not include lastPrice, we calculate mid-price
 }
 
 export interface KucoinPriceData {
@@ -97,7 +97,7 @@ export class KucoinPriceMonitor {
           }
 
           // Handle ticker data
-          if (message.type === 'message' && message.topic === '/market/ticker:KASUSDTM') {
+          if (message.type === 'message' && message.topic === '/contractMarket/tickerV2:KASUSDTM') {
             logger.debug('Kucoin', '📊 Ticker data received', message.data);
             this.handleTickerData(message.data);
           }
@@ -193,12 +193,11 @@ export class KucoinPriceMonitor {
     const subscribeMessage = {
       id: Date.now(),
       type: 'subscribe',
-      topic: '/market/ticker:KASUSDTM',
-      privateChannel: false,
+      topic: '/contractMarket/tickerV2:KASUSDTM',
       response: true
     };
 
-    logger.info('Kucoin', 'Subscribing to ticker', subscribeMessage);
+    logger.info('Kucoin', 'Subscribing to futures ticker', subscribeMessage);
     this.ws?.send(JSON.stringify(subscribeMessage));
   }
 
@@ -213,9 +212,11 @@ export class KucoinPriceMonitor {
   }
 
   private handleTickerData(data: KucoinTickerData) {
-    const price = parseFloat(data.price);
-    const bid = parseFloat(data.bestBidPrice);
-    const ask = parseFloat(data.bestAskPrice);
+    const bid = typeof data.bestBidPrice === 'number' ? data.bestBidPrice : parseFloat(String(data.bestBidPrice));
+    const ask = typeof data.bestAskPrice === 'number' ? data.bestAskPrice : parseFloat(String(data.bestAskPrice));
+
+    // tickerV2 doesn't include lastPrice, so calculate mid-price
+    const price = (bid + ask) / 2;
 
     const priceData: KucoinPriceData = {
       exchange: 'Kucoin',
