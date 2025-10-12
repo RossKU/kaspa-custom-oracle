@@ -193,8 +193,9 @@ export class BybitAPI {
       });
 
       // Use account info endpoint to test connection
+      // Changed from UNIFIED to CONTRACT for Testnet compatibility
       const response = await this.request('GET', '/v5/account/wallet-balance', {
-        accountType: 'UNIFIED'
+        accountType: 'CONTRACT'
       });
 
       const success = response.retCode === 0;
@@ -223,8 +224,9 @@ export class BybitAPI {
     try {
       logger.info('Bybit API', 'Fetching account balance...');
 
+      // Changed from UNIFIED to CONTRACT for Testnet compatibility
       const response = await this.request('GET', '/v5/account/wallet-balance', {
-        accountType: 'UNIFIED'
+        accountType: 'CONTRACT'
       });
 
       if (response.retCode !== 0) {
