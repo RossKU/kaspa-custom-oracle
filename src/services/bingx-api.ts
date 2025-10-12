@@ -257,18 +257,22 @@ export class BingXAPI {
         throw new Error(response.msg || 'Failed to fetch balance');
       }
 
-      // BingX returns an array of asset balances
-      const balances = response.data || [];
+      // Perpetual Swap V2 API returns data.balance (object), not an array
+      // Response format: { data: { balance: { asset, balance, availableMargin, ... } } }
+      const balanceData = response.data?.balance;
 
-      // Find all asset balances
-      const usdtAsset = balances.find((b: any) => b.asset === 'USDT');
-      const vstAsset = balances.find((b: any) => b.asset === 'VST');  // Demo trading token
-      const kasAsset = balances.find((b: any) => b.asset === 'KAS');
+      if (!balanceData) {
+        throw new Error('No balance data in response');
+      }
+
+      // Extract balance information
+      const asset = balanceData.asset; // 'VST' for demo, 'USDT' for production
+      const balanceValue = parseFloat(balanceData.balance || balanceData.availableMargin || '0');
 
       const balance = {
-        USDT: parseFloat(usdtAsset?.availableBalance || usdtAsset?.balance || '0'),
-        VST: parseFloat(vstAsset?.availableBalance || vstAsset?.balance || '0'),
-        KAS: parseFloat(kasAsset?.availableBalance || kasAsset?.balance || '0')
+        USDT: asset === 'USDT' ? balanceValue : 0,
+        VST: asset === 'VST' ? balanceValue : 0,
+        KAS: 0  // KAS balance not provided in this endpoint
       };
 
       logger.info('BingX API', 'Balance fetched successfully', balance);
