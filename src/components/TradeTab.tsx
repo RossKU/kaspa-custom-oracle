@@ -9,6 +9,7 @@ import type { KucoinPriceData } from '../services/kucoin';
 import type { BingXPriceData } from '../services/bingx';
 import { logger } from '../utils/logger';
 import BingXAPI from '../services/bingx-api';
+import BybitAPI from '../services/bybit-api';
 
 interface TradeTabProps {
   binanceData: PriceData | null;
@@ -39,6 +40,13 @@ export function TradeTab(props: TradeTabProps) {
   const [tradeMessage, setTradeMessage] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [bingxApi, setBingxApi] = useState<BingXAPI | null>(null);
+
+  // Bybit trading state
+  const [bybitPositions, setBybitPositions] = useState<any[]>([]);
+  const [bybitTradeQuantity, setBybitTradeQuantity] = useState('100');
+  const [bybitTradeMessage, setBybitTradeMessage] = useState('');
+  const [bybitIsLoading, setBybitIsLoading] = useState(false);
+  const [bybitApi, setBybitApi] = useState<BybitAPI | null>(null);
 
   // Get price from exchange name
   const getPrice = (exchange: string): number | null => {
@@ -185,7 +193,40 @@ export function TradeTab(props: TradeTabProps) {
     }
   }, [authState.isAuthenticated]);
 
-  // Fetch positions periodically
+  // Initialize Bybit API from localStorage
+  useEffect(() => {
+    if (authState.isAuthenticated) {
+      try {
+        const apiConfig = localStorage.getItem('apiConfig');
+        if (apiConfig) {
+          const parsed = JSON.parse(apiConfig);
+          if (parsed.exchange === 'bybit') {
+            logger.info('Trade Tab', 'Bybit API config loaded', {
+              hasApiKey: !!parsed.apiKey,
+              apiKeyLength: parsed.apiKey?.length || 0,
+              hasApiSecret: !!parsed.apiSecret,
+              apiSecretLength: parsed.apiSecret?.length || 0,
+              testnet: parsed.testnet
+            });
+
+            const api = new BybitAPI({
+              apiKey: parsed.apiKey,
+              apiSecret: parsed.apiSecret,
+              testnet: parsed.testnet
+            });
+            setBybitApi(api);
+            logger.info('Trade Tab', '✅ Bybit API initialized successfully');
+          }
+        }
+      } catch (error) {
+        logger.error('Trade Tab', 'Failed to initialize Bybit API', {
+          error: error instanceof Error ? error.message : String(error)
+        });
+      }
+    }
+  }, [authState.isAuthenticated]);
+
+  // Fetch BingX positions periodically
   useEffect(() => {
     if (!bingxApi || !authState.isAuthenticated) {
       logger.info('Trade Tab', 'Position fetcher not starting', {
@@ -226,6 +267,30 @@ export function TradeTab(props: TradeTabProps) {
       clearInterval(interval);
     };
   }, [bingxApi, authState.isAuthenticated]);
+
+  // Fetch Bybit positions periodically
+  useEffect(() => {
+    if (!bybitApi || !authState.isAuthenticated) {
+      return;
+    }
+
+    const fetchBybitPositions = async () => {
+      try {
+        const allPositions = await bybitApi.getAllPositions();
+        // Filter only open positions
+        const openPositions = allPositions.filter((p: any) => parseFloat(p.size) > 0);
+        setBybitPositions(openPositions);
+      } catch (error) {
+        logger.error('Trade Tab', 'Failed to fetch Bybit positions', {
+          error: error instanceof Error ? error.message : String(error)
+        });
+      }
+    };
+
+    fetchBybitPositions();
+    const interval = setInterval(fetchBybitPositions, 5000);
+    return () => clearInterval(interval);
+  }, [bybitApi, authState.isAuthenticated]);
 
   // Manual trading handlers
   const handleMarketBuy = async () => {
@@ -337,6 +402,105 @@ export function TradeTab(props: TradeTabProps) {
       logger.error('Trade Tab', 'Close all positions failed', { error: errorMsg });
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  // Bybit manual trading handlers
+  const handleBybitMarketBuy = async () => {
+    if (!bybitApi) {
+      setBybitTradeMessage('❌ Bybit API not configured. Go to API tab first.');
+      return;
+    }
+
+    setBybitIsLoading(true);
+    setBybitTradeMessage('⏳ Placing Market Buy order...');
+
+    try {
+      const result = await bybitApi.placeOrder({
+        symbol: 'KASUSDT',  // No hyphen
+        side: 'Buy',
+        orderType: 'Market',
+        qty: bybitTradeQuantity
+      });
+
+      setBybitTradeMessage(`✅ Buy order placed! Order ID: ${result.orderId}`);
+      logger.info('Trade Tab', 'Bybit Market Buy executed', result);
+    } catch (error) {
+      const errorMsg = error instanceof Error ? error.message : String(error);
+      setBybitTradeMessage(`❌ Failed: ${errorMsg}`);
+      logger.error('Trade Tab', 'Bybit Market Buy failed', { error: errorMsg });
+    } finally {
+      setBybitIsLoading(false);
+    }
+  };
+
+  const handleBybitMarketSell = async () => {
+    if (!bybitApi) {
+      setBybitTradeMessage('❌ Bybit API not configured. Go to API tab first.');
+      return;
+    }
+
+    setBybitIsLoading(true);
+    setBybitTradeMessage('⏳ Placing Market Sell order...');
+
+    try {
+      const result = await bybitApi.placeOrder({
+        symbol: 'KASUSDT',
+        side: 'Sell',
+        orderType: 'Market',
+        qty: bybitTradeQuantity
+      });
+
+      setBybitTradeMessage(`✅ Sell order placed! Order ID: ${result.orderId}`);
+      logger.info('Trade Tab', 'Bybit Market Sell executed', result);
+    } catch (error) {
+      const errorMsg = error instanceof Error ? error.message : String(error);
+      setBybitTradeMessage(`❌ Failed: ${errorMsg}`);
+      logger.error('Trade Tab', 'Bybit Market Sell failed', { error: errorMsg });
+    } finally {
+      setBybitIsLoading(false);
+    }
+  };
+
+  const handleBybitClosePosition = async (symbol: string, side: 'Buy' | 'Sell') => {
+    if (!bybitApi) return;
+
+    setBybitIsLoading(true);
+    setBybitTradeMessage(`⏳ Closing position...`);
+
+    try {
+      const result = await bybitApi.closePosition(symbol, side);
+      setBybitTradeMessage(`✅ Position closed! Order ID: ${result.orderId}`);
+      logger.info('Trade Tab', 'Bybit position closed', result);
+    } catch (error) {
+      const errorMsg = error instanceof Error ? error.message : String(error);
+      setBybitTradeMessage(`❌ Failed: ${errorMsg}`);
+      logger.error('Trade Tab', 'Bybit close position failed', { error: errorMsg });
+    } finally {
+      setBybitIsLoading(false);
+    }
+  };
+
+  const handleBybitCloseAllPositions = async () => {
+    if (!bybitApi) return;
+
+    if (!confirm('⚠️ Close ALL Bybit positions? This cannot be undone!')) {
+      return;
+    }
+
+    setBybitIsLoading(true);
+    setBybitTradeMessage('⏳ Closing all positions...');
+
+    try {
+      const result = await bybitApi.closeAllPositions();
+      setBybitTradeMessage(`✅ ${result.message}`);
+      logger.info('Trade Tab', 'All Bybit positions closed', result);
+    } catch (error) {
+      const errorMsg = error instanceof Error ? error.message : String(error);
+      setBybitTradeMessage(`❌ Failed: ${errorMsg}`);
+      logger.error('Trade Tab', 'Bybit close all positions failed', { error: errorMsg });
+    } finally {
+      setBybitIsLoading(false);
     }
   };
 
@@ -895,6 +1059,259 @@ export function TradeTab(props: TradeTabProps) {
           <strong>⚠️ Risk Warning:</strong> Trading perpetual futures involves significant risk.
           You may lose your entire investment. BingX does not offer testnet - this is REAL trading.
           Start with small amounts to test functionality.
+        </div>
+      </div>
+
+      {/* Bybit Manual Trading Section */}
+      <div style={{
+        marginTop: '30px',
+        border: '2px solid #6f42c1',
+        borderRadius: '8px',
+        padding: '20px',
+        backgroundColor: '#f8f9fa'
+      }}>
+        <h3 style={{ marginTop: 0, marginBottom: '15px', color: '#6f42c1' }}>
+          📊 Manual Trading - Bybit KASUSDT
+        </h3>
+
+        {/* API Status */}
+        {!bybitApi && (
+          <div style={{
+            padding: '12px',
+            marginBottom: '15px',
+            backgroundColor: '#fff3cd',
+            border: '1px solid #ffc107',
+            borderRadius: '4px',
+            color: '#856404'
+          }}>
+            ⚠️ Bybit API not configured. Go to <strong>API Tab</strong> and set up your API keys first.
+          </div>
+        )}
+
+        {/* Trade Message */}
+        {bybitTradeMessage && (
+          <div style={{
+            padding: '12px',
+            marginBottom: '15px',
+            backgroundColor: bybitTradeMessage.includes('✅') ? '#d4edda' : bybitTradeMessage.includes('❌') ? '#f8d7da' : '#d1ecf1',
+            border: `1px solid ${bybitTradeMessage.includes('✅') ? '#c3e6cb' : bybitTradeMessage.includes('❌') ? '#f5c6cb' : '#bee5eb'}`,
+            borderRadius: '4px',
+            color: bybitTradeMessage.includes('✅') ? '#155724' : bybitTradeMessage.includes('❌') ? '#721c24' : '#0c5460'
+          }}>
+            {bybitTradeMessage}
+          </div>
+        )}
+
+        {/* Order Entry */}
+        <div style={{
+          display: 'grid',
+          gridTemplateColumns: '1fr 1fr',
+          gap: '15px',
+          marginBottom: '20px'
+        }}>
+          <div>
+            <label style={{ display: 'block', marginBottom: '8px', fontWeight: 'bold' }}>
+              Quantity (KAS):
+            </label>
+            <input
+              type="number"
+              value={bybitTradeQuantity}
+              onChange={(e) => setBybitTradeQuantity(e.target.value)}
+              style={{
+                width: '100%',
+                padding: '10px',
+                fontSize: '16px',
+                border: '1px solid #ccc',
+                borderRadius: '4px'
+              }}
+              disabled={bybitIsLoading || !bybitApi}
+            />
+          </div>
+
+          <div>
+            <label style={{ display: 'block', marginBottom: '8px', fontWeight: 'bold' }}>
+              Current Price:
+            </label>
+            <div style={{
+              padding: '10px',
+              fontSize: '18px',
+              fontWeight: 'bold',
+              backgroundColor: '#e9ecef',
+              border: '1px solid #ccc',
+              borderRadius: '4px',
+              color: '#28a745'
+            }}>
+              ${props.bybitData?.price?.toFixed(5) || '--'}
+            </div>
+          </div>
+        </div>
+
+        {/* Trade Buttons */}
+        <div style={{
+          display: 'grid',
+          gridTemplateColumns: '1fr 1fr',
+          gap: '15px',
+          marginBottom: '20px'
+        }}>
+          <button
+            onClick={handleBybitMarketBuy}
+            disabled={bybitIsLoading || !bybitApi}
+            style={{
+              padding: '15px',
+              fontSize: '18px',
+              fontWeight: 'bold',
+              backgroundColor: bybitIsLoading || !bybitApi ? '#6c757d' : '#28a745',
+              color: 'white',
+              border: 'none',
+              borderRadius: '4px',
+              cursor: bybitIsLoading || !bybitApi ? 'not-allowed' : 'pointer',
+              transition: 'background-color 0.2s'
+            }}
+          >
+            {bybitIsLoading ? '⏳ Loading...' : '🟢 Market BUY (Long)'}
+          </button>
+
+          <button
+            onClick={handleBybitMarketSell}
+            disabled={bybitIsLoading || !bybitApi}
+            style={{
+              padding: '15px',
+              fontSize: '18px',
+              fontWeight: 'bold',
+              backgroundColor: bybitIsLoading || !bybitApi ? '#6c757d' : '#dc3545',
+              color: 'white',
+              border: 'none',
+              borderRadius: '4px',
+              cursor: bybitIsLoading || !bybitApi ? 'not-allowed' : 'pointer',
+              transition: 'background-color 0.2s'
+            }}
+          >
+            {bybitIsLoading ? '⏳ Loading...' : '🔴 Market SELL (Short)'}
+          </button>
+        </div>
+
+        {/* Positions Section */}
+        <div style={{
+          borderTop: '2px solid #dee2e6',
+          paddingTop: '20px'
+        }}>
+          <div style={{
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            marginBottom: '15px'
+          }}>
+            <h4 style={{ margin: 0 }}>Open Positions ({bybitPositions.length})</h4>
+            {bybitPositions.length > 0 && (
+              <button
+                onClick={handleBybitCloseAllPositions}
+                disabled={bybitIsLoading}
+                style={{
+                  padding: '8px 16px',
+                  fontSize: '14px',
+                  fontWeight: 'bold',
+                  backgroundColor: bybitIsLoading ? '#6c757d' : '#ffc107',
+                  color: '#000',
+                  border: 'none',
+                  borderRadius: '4px',
+                  cursor: bybitIsLoading ? 'not-allowed' : 'pointer'
+                }}
+              >
+                ⚠️ Close All Positions
+              </button>
+            )}
+          </div>
+
+          {bybitPositions.length === 0 ? (
+            <div style={{
+              padding: '20px',
+              textAlign: 'center',
+              backgroundColor: '#e9ecef',
+              borderRadius: '4px',
+              color: '#6c757d'
+            }}>
+              No open positions
+            </div>
+          ) : (
+            <div style={{
+              display: 'grid',
+              gap: '10px'
+            }}>
+              {bybitPositions.map((position: any, index: number) => {
+                const size = parseFloat(position.size || '0');
+                const positionSide = position.side; // 'Buy' or 'Sell'
+                const unrealizedProfit = parseFloat(position.unrealisedPnl || '0');
+
+                return (
+                  <div
+                    key={index}
+                    style={{
+                      display: 'grid',
+                      gridTemplateColumns: '100px 80px 120px 120px 1fr auto',
+                      gap: '10px',
+                      alignItems: 'center',
+                      padding: '12px',
+                      backgroundColor: 'white',
+                      border: `2px solid ${positionSide === 'Buy' ? '#28a745' : '#dc3545'}`,
+                      borderRadius: '4px'
+                    }}
+                  >
+                    <div>
+                      <strong>{position.symbol}</strong>
+                    </div>
+                    <div style={{
+                      fontWeight: 'bold',
+                      color: positionSide === 'Buy' ? '#28a745' : '#dc3545'
+                    }}>
+                      {positionSide === 'Buy' ? 'LONG' : 'SHORT'}
+                    </div>
+                    <div>
+                      Qty: {size.toFixed(2)}
+                    </div>
+                    <div style={{
+                      fontWeight: 'bold',
+                      color: unrealizedProfit >= 0 ? '#28a745' : '#dc3545'
+                    }}>
+                      PnL: {unrealizedProfit >= 0 ? '+' : ''}{unrealizedProfit.toFixed(2)} USDT
+                    </div>
+                    <div style={{ fontSize: '12px', color: '#666' }}>
+                      Entry: ${parseFloat(position.avgPrice || '0').toFixed(5)}
+                    </div>
+                    <button
+                      onClick={() => handleBybitClosePosition(position.symbol, position.side)}
+                      disabled={bybitIsLoading}
+                      style={{
+                        padding: '6px 12px',
+                        fontSize: '13px',
+                        fontWeight: 'bold',
+                        backgroundColor: bybitIsLoading ? '#6c757d' : '#6f42c1',
+                        color: 'white',
+                        border: 'none',
+                        borderRadius: '4px',
+                        cursor: bybitIsLoading ? 'not-allowed' : 'pointer'
+                      }}
+                    >
+                      Close
+                    </button>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+
+        {/* Risk Warning */}
+        <div style={{
+          marginTop: '15px',
+          padding: '12px',
+          backgroundColor: '#d1ecf1',
+          border: '1px solid #bee5eb',
+          borderRadius: '4px',
+          fontSize: '13px',
+          color: '#0c5460'
+        }}>
+          <strong>ℹ️ Demo Trading Notice:</strong> This is Bybit Demo Trading with virtual funds (50,000 USDT).
+          Perfect for testing strategies without real money risk. Demo data may differ from production.
         </div>
       </div>
 
