@@ -21,6 +21,7 @@ export class BybitPriceMonitor {
   private onDataCallback: ((data: BybitPriceData) => void) | null = null;
   private onErrorCallback: ((error: string) => void) | null = null;
   private pingInterval: number | null = null;
+  private lastPriceData: BybitPriceData | null = null;
 
   connect(
     onData: (data: BybitPriceData) => void,
@@ -103,13 +104,21 @@ export class BybitPriceMonitor {
   }
 
   private handleTickerData(data: BybitTickerData) {
+    // Use previous values if current data is undefined (delta updates)
+    const price = data.lastPrice ? parseFloat(data.lastPrice) : (this.lastPriceData?.price ?? 0);
+    const bid = data.bid1Price ? parseFloat(data.bid1Price) : (this.lastPriceData?.bid ?? 0);
+    const ask = data.ask1Price ? parseFloat(data.ask1Price) : (this.lastPriceData?.ask ?? 0);
+
     const priceData: BybitPriceData = {
       exchange: 'Bybit',
       type: 'F', // Futures
-      price: parseFloat(data.lastPrice),
-      bid: parseFloat(data.bid1Price),
-      ask: parseFloat(data.ask1Price)
+      price,
+      bid,
+      ask
     };
+
+    // Store for next delta update
+    this.lastPriceData = priceData;
 
     console.log('[Bybit] Parsed price data:', priceData);
     this.onDataCallback?.(priceData);

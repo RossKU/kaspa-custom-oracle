@@ -23,6 +23,7 @@ export class GateioPriceMonitor {
   private onDataCallback: ((data: GateioPriceData) => void) | null = null;
   private onErrorCallback: ((error: string) => void) | null = null;
   private pingInterval: number | null = null;
+  private lastPriceData: GateioPriceData | null = null;
 
   connect(
     onData: (data: GateioPriceData) => void,
@@ -105,13 +106,21 @@ export class GateioPriceMonitor {
   }
 
   private handleTickerData(data: GateioTickerData) {
+    // Use previous values if current data is undefined (delta updates)
+    const price = data.last ? parseFloat(data.last) : (this.lastPriceData?.price ?? 0);
+    const bid = data.bid1_price ? parseFloat(data.bid1_price) : (this.lastPriceData?.bid ?? 0);
+    const ask = data.ask1_price ? parseFloat(data.ask1_price) : (this.lastPriceData?.ask ?? 0);
+
     const priceData: GateioPriceData = {
       exchange: 'Gate.io',
       type: 'F', // Futures
-      price: parseFloat(data.last),
-      bid: parseFloat(data.bid1_price),
-      ask: parseFloat(data.ask1_price)
+      price,
+      bid,
+      ask
     };
+
+    // Store for next delta update
+    this.lastPriceData = priceData;
 
     console.log('[Gate.io] Parsed price data:', priceData);
     this.onDataCallback?.(priceData);
