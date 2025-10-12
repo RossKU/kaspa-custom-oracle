@@ -256,20 +256,47 @@ export function ApiTab() {
       {config.exchange === 'bingx' && (
         <div className="info-box">
           <h4>ℹ️ How to get BingX API keys:</h4>
+
+          <div style={{marginBottom: '1rem', padding: '12px', backgroundColor: '#e7f3ff', border: '1px solid #2196f3', borderRadius: '4px'}}>
+            <strong>📌 IMPORTANT: Demo Trading vs Production</strong>
+            <p style={{margin: '8px 0 0 0', fontSize: '0.9rem'}}>
+              BingX requires <strong>separate API keys</strong> for Demo Trading and Production!
+            </p>
+          </div>
+
+          <h5 style={{marginTop: '1rem'}}>For Demo Trading (100,000 VST):</h5>
           <ol>
             <li>Go to <a href="https://bingx.com" target="_blank" rel="noopener noreferrer">BingX</a></li>
-            <li>Create an account (free, KYC may be required for trading)</li>
+            <li>Create an account (free)</li>
+            <li><strong>Click "Demo Trading" in top right corner</strong></li>
+            <li>Switch to <strong>Demo Mode</strong> (you'll see VST balance)</li>
+            <li>Go to Account → API Management <strong>(in Demo Mode)</strong></li>
+            <li>Create new API key with "Contract Trading" permission</li>
+            <li>Copy <strong>Demo API Key and Secret</strong> here</li>
+            <li>Check "Use Demo Trading" checkbox above</li>
+          </ol>
+
+          <h5 style={{marginTop: '1rem'}}>For Real Trading (USDT):</h5>
+          <ol>
+            <li>Stay in <strong>Production Mode</strong> (don't click Demo Trading)</li>
             <li>Go to Account → API Management</li>
             <li>Create new API key with "Contract Trading" permission</li>
-            <li>Set IP whitelist for additional security (optional)</li>
-            <li>Copy API Key and Secret here</li>
+            <li>Deposit USDT to your Perpetual Futures account</li>
+            <li>Copy <strong>Production API Key and Secret</strong> here</li>
+            <li>Uncheck "Use Demo Trading" checkbox</li>
           </ol>
+
           <p className="warning">
             ⚠️ Never share your API keys! They are stored locally in your browser.
           </p>
-          <p style={{marginTop: '1rem', fontSize: '0.9rem', color: '#f39c12'}}>
-            ⚠️ BingX does not offer a testnet. The "Use Demo Trading" checkbox has no effect. Test with small amounts!
-          </p>
+
+          <div style={{marginTop: '1rem', padding: '12px', backgroundColor: '#fff3cd', border: '1px solid #ffc107', borderRadius: '4px'}}>
+            <strong>⚠️ Common Error:</strong>
+            <p style={{margin: '8px 0 0 0', fontSize: '0.9rem'}}>
+              "Insufficient margin" error means you're using <strong>Production API keys</strong> but have no USDT balance.
+              Solution: Create <strong>Demo API keys</strong> inside Demo Trading mode!
+            </p>
+          </div>
         </div>
       )}
     </section>
