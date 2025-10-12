@@ -48,31 +48,52 @@ export function TradeTab(props: TradeTabProps) {
   const [bybitIsLoading, setBybitIsLoading] = useState(false);
   const [bybitApi, setBybitApi] = useState<BybitAPI | null>(null);
 
-  // Get price from exchange name
-  const getPrice = (exchange: string): number | null => {
+  // Get Bid/Ask prices from exchange name
+  const getExchangeData = (exchange: string): { bid: number; ask: number } | null => {
     switch (exchange) {
-      case 'Binance': return props.binanceData?.price || null;
-      case 'MEXC': return props.mexcData?.price || null;
-      case 'Bybit': return props.bybitData?.price || null;
-      case 'Gate.io': return props.gateioData?.price || null;
-      case 'Kucoin': return props.kucoinData?.price || null;
-      case 'BingX': return props.bingxData?.price || null;
-      default: return null;
+      case 'Binance':
+        if (!props.binanceData) return null;
+        return { bid: props.binanceData.price || 0, ask: props.binanceData.price || 0 };
+      case 'MEXC':
+        if (!props.mexcData) return null;
+        return { bid: props.mexcData.price || 0, ask: props.mexcData.price || 0 };
+      case 'Bybit':
+        if (!props.bybitData) return null;
+        return { bid: props.bybitData.bid || 0, ask: props.bybitData.ask || 0 };
+      case 'Gate.io':
+        if (!props.gateioData) return null;
+        return { bid: props.gateioData.price || 0, ask: props.gateioData.price || 0 };
+      case 'Kucoin':
+        if (!props.kucoinData) return null;
+        return { bid: props.kucoinData.price || 0, ask: props.kucoinData.price || 0 };
+      case 'BingX':
+        if (!props.bingxData) return null;
+        return { bid: props.bingxData.bid || 0, ask: props.bingxData.ask || 0 };
+      default:
+        return null;
     }
   };
 
-  // Calculate Gap as percentage
-  const calculateGap = (priceA: number | null, priceB: number | null): string => {
-    if (!priceA || !priceB || priceB === 0) return '--';
-    const gap = ((priceA - priceB) / priceB) * 100;
+  // Calculate arbitrage gap (correct calculation for arbitrage trading)
+  // "A買いB売り" = Buy at A (ask price) and Sell at B (bid price)
+  // Gap = (B_bid - A_ask) / A_ask * 100
+  const calculateArbitrageGap = (
+    buyExchangeData: { bid: number; ask: number } | null,
+    sellExchangeData: { bid: number; ask: number } | null
+  ): string => {
+    if (!buyExchangeData || !sellExchangeData) return '--';
+    const buyPrice = buyExchangeData.ask;  // Buy at ASK price
+    const sellPrice = sellExchangeData.bid; // Sell at BID price
+    if (buyPrice === 0) return '--';
+    const gap = ((sellPrice - buyPrice) / buyPrice) * 100;
     return gap.toFixed(3);
   };
 
-  // Calculate gaps for both directions
-  const priceA = getPrice(exchangeA);
-  const priceB = getPrice(exchangeB);
-  const gapABuyBSell = calculateGap(priceA, priceB); // A買いB売り
-  const gapBBuyASell = calculateGap(priceB, priceA); // B買いA売り
+  // Calculate gaps for both directions with proper Bid/Ask
+  const exchangeAData = getExchangeData(exchangeA);
+  const exchangeBData = getExchangeData(exchangeB);
+  const gapABuyBSell = calculateArbitrageGap(exchangeAData, exchangeBData); // A買いB売り (A ask → B bid)
+  const gapBBuyASell = calculateArbitrageGap(exchangeBData, exchangeAData); // B買いA売り (B ask → A bid)
 
   // Check session timeout
   useEffect(() => {
