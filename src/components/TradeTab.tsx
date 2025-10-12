@@ -48,6 +48,12 @@ export function TradeTab(props: TradeTabProps) {
   const [bybitIsLoading, setBybitIsLoading] = useState(false);
   const [bybitApi, setBybitApi] = useState<BybitAPI | null>(null);
 
+  // Trigger duration state (for GAP continuous threshold)
+  const [triggerDurationAType, setTriggerDurationAType] = useState<'300' | '600' | '900' | 'custom'>('900');
+  const [triggerDurationACustom, setTriggerDurationACustom] = useState('900');
+  const [triggerDurationBType, setTriggerDurationBType] = useState<'300' | '600' | '900' | 'custom'>('900');
+  const [triggerDurationBCustom, setTriggerDurationBCustom] = useState('900');
+
   // Get Bid/Ask prices from exchange name
   const getExchangeData = (exchange: string): { bid: number; ask: number } | null => {
     switch (exchange) {
@@ -799,18 +805,25 @@ export function TradeTab(props: TradeTabProps) {
               />
               <span style={{ fontSize: '11px', color: '#666' }}>Gap</span>
               <input type="number" defaultValue="0" style={{ width: '40px', padding: '4px', border: '1px solid #ccc' }} />
-              <input
-                type="number"
-                list="trigger-duration-a"
-                defaultValue="900"
+              <select
+                value={triggerDurationAType}
+                onChange={(e) => setTriggerDurationAType(e.target.value as '300' | '600' | '900' | 'custom')}
                 style={{ width: '70px', padding: '4px', border: '1px solid #ccc' }}
-                placeholder="900"
-              />
-              <datalist id="trigger-duration-a">
-                <option value="300">300ms</option>
-                <option value="600">600ms</option>
-                <option value="900">900ms</option>
-              </datalist>
+              >
+                <option value="300">300</option>
+                <option value="600">600</option>
+                <option value="900">900</option>
+                <option value="custom">Custom</option>
+              </select>
+              {triggerDurationAType === 'custom' && (
+                <input
+                  type="number"
+                  value={triggerDurationACustom}
+                  onChange={(e) => setTriggerDurationACustom(e.target.value)}
+                  style={{ width: '60px', padding: '4px', border: '1px solid #ccc' }}
+                  placeholder="ms"
+                />
+              )}
               <span style={{ fontSize: '11px', background: '#e9ecef', padding: '4px 8px', border: '1px solid #ccc' }}>S左M両</span>
               <button style={{ padding: '4px 8px', border: '1px solid #999', background: '#d4edda', cursor: 'pointer', fontSize: '11px' }}>自動</button>
             </div>
@@ -841,18 +854,25 @@ export function TradeTab(props: TradeTabProps) {
               />
               <span style={{ fontSize: '11px', color: '#666' }}>Gap</span>
               <input type="number" defaultValue="0" style={{ width: '40px', padding: '4px', border: '1px solid #ccc' }} />
-              <input
-                type="number"
-                list="trigger-duration-b"
-                defaultValue="900"
+              <select
+                value={triggerDurationBType}
+                onChange={(e) => setTriggerDurationBType(e.target.value as '300' | '600' | '900' | 'custom')}
                 style={{ width: '70px', padding: '4px', border: '1px solid #ccc' }}
-                placeholder="900"
-              />
-              <datalist id="trigger-duration-b">
-                <option value="300">300ms</option>
-                <option value="600">600ms</option>
-                <option value="900">900ms</option>
-              </datalist>
+              >
+                <option value="300">300</option>
+                <option value="600">600</option>
+                <option value="900">900</option>
+                <option value="custom">Custom</option>
+              </select>
+              {triggerDurationBType === 'custom' && (
+                <input
+                  type="number"
+                  value={triggerDurationBCustom}
+                  onChange={(e) => setTriggerDurationBCustom(e.target.value)}
+                  style={{ width: '60px', padding: '4px', border: '1px solid #ccc' }}
+                  placeholder="ms"
+                />
+              )}
               <span style={{ fontSize: '11px', background: '#e9ecef', padding: '4px 8px', border: '1px solid #ccc' }}>M右S両</span>
               <button style={{ padding: '4px 8px', border: '1px solid #999', background: '#d4edda', cursor: 'pointer', fontSize: '11px' }}>自動</button>
             </div>
