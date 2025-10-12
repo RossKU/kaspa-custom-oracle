@@ -11,7 +11,6 @@ function App() {
   const monitorRef = useRef<BinancePriceMonitor | null>(null)
 
   useEffect(() => {
-    // WebSocket接続
     const monitor = new BinancePriceMonitor()
     monitorRef.current = monitor
 
@@ -28,7 +27,6 @@ function App() {
       }
     )
 
-    // クリーンアップ
     return () => {
       monitor.disconnect()
       monitorRef.current = null
@@ -39,75 +37,48 @@ function App() {
     <div className="app">
       <header className="header">
         <h1>Kaspa Custom Oracle</h1>
-        <p>Price Monitoring System</p>
+        <div className="status-bar">
+          <span className="status-item">
+            Status: <span className={`status-badge ${isConnecting ? 'connecting' : error ? 'error' : 'connected'}`}>
+              {isConnecting ? 'Connecting' : error ? 'Error' : 'Connected'}
+            </span>
+          </span>
+          <span className="status-item">Last Update: {lastUpdateTime || 'N/A'}</span>
+        </div>
       </header>
 
       <main className="main">
-        <section className="status-panel">
-          <h2>System Status</h2>
-          <div className="status-item">
-            <span>Connection:</span>
-            <span className="status-value" style={{ color: isConnecting ? '#ffc107' : error ? '#dc3545' : '#28a745' }}>
-              {isConnecting ? 'Connecting...' : error ? 'Error' : 'Connected'}
-            </span>
-          </div>
-          <div className="status-item">
-            <span>Monitoring:</span>
-            <span className="status-value" style={{ color: priceData ? '#28a745' : '#666' }}>
-              {priceData ? 'Active' : 'Inactive'}
-            </span>
-          </div>
-          <div className="status-item">
-            <span>Last Update:</span>
-            <span className="status-value">{lastUpdateTime || 'N/A'}</span>
-          </div>
-        </section>
+        <section className="table-section">
+          {isConnecting && <p className="loading-message">Connecting to exchanges...</p>}
+          {error && <p className="error-message">{error}</p>}
 
-        <section className="price-panel">
-          <h2>Price Monitor - KASUSDT Perpetual</h2>
-          {isConnecting && <p>Connecting to Binance WebSocket...</p>}
-          {error && <p style={{ color: '#dc3545' }}>{error}</p>}
           {priceData && (
-            <div className="price-grid">
-              <div className="price-item large">
-                <span className="label">Current Price</span>
-                <span className="value">${priceData.price.toFixed(7)}</span>
-                <span className={`change ${priceData.priceChange >= 0 ? 'positive' : 'negative'}`}>
-                  {priceData.priceChange >= 0 ? '▲' : '▼'} {priceData.priceChangePercent.toFixed(2)}%
-                </span>
-              </div>
-              <div className="price-item">
-                <span className="label">Best Bid</span>
-                <span className="value">${priceData.bestBid.toFixed(7)}</span>
-              </div>
-              <div className="price-item">
-                <span className="label">Best Ask</span>
-                <span className="value">${priceData.bestAsk.toFixed(7)}</span>
-              </div>
-              <div className="price-item">
-                <span className="label">24h High</span>
-                <span className="value">${priceData.high24h.toFixed(7)}</span>
-              </div>
-              <div className="price-item">
-                <span className="label">24h Low</span>
-                <span className="value">${priceData.low24h.toFixed(7)}</span>
-              </div>
-              <div className="price-item">
-                <span className="label">24h Volume</span>
-                <span className="value">{parseFloat(priceData.volume24h).toLocaleString()} KAS</span>
-              </div>
-            </div>
+            <table className="price-table">
+              <thead>
+                <tr>
+                  <th>Exchange</th>
+                  <th>Type</th>
+                  <th>Price</th>
+                  <th>Bid</th>
+                  <th>Ask</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td>Binance</td>
+                  <td className="type-futures">F</td>
+                  <td className="price">${priceData.price.toFixed(7)}</td>
+                  <td className="bid">${priceData.bestBid.toFixed(7)}</td>
+                  <td className="ask">${priceData.bestAsk.toFixed(7)}</td>
+                </tr>
+              </tbody>
+            </table>
           )}
-        </section>
-
-        <section className="opportunity-panel">
-          <h2>Trading Opportunities</h2>
-          <p>Coming soon...</p>
         </section>
       </main>
 
       <footer className="footer">
-        <p>Kaspa Custom Oracle v0.2.0 - Real-time WebSocket</p>
+        <p>Kaspa Custom Oracle v0.3.0</p>
       </footer>
     </div>
   )
