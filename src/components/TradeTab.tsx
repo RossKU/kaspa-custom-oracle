@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
-import { TRADE_PASSWORD, SESSION_TIMEOUT, TradeAuthState } from '../types/trade';
+import { TRADE_PASSWORD, SESSION_TIMEOUT } from '../types/trade';
+import type { TradeAuthState } from '../types/trade';
 import { logger } from '../utils/logger';
 
 export function TradeTab() {

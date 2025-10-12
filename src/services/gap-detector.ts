@@ -1,7 +1,7 @@
 // Gap Detector Service
 // Analyzes price differences between exchanges for arbitrage opportunities
 
-import {
+import type {
   ExchangeFees,
   ExchangePrice,
   GapOpportunity,
