@@ -628,23 +628,6 @@ export function TradeTab(props: TradeTabProps) {
           >
             Unlock Trade Tab
           </button>
-
-          <div style={{
-            marginTop: '20px',
-            padding: '15px',
-            backgroundColor: '#d1ecf1',
-            border: '1px solid #bee5eb',
-            borderRadius: '4px',
-            fontSize: '14px',
-            color: '#0c5460'
-          }}>
-            <strong>ℹ️ Security Notice:</strong>
-            <ul style={{ marginTop: '10px', paddingLeft: '20px' }}>
-              <li>Session expires after 1 hour of inactivity</li>
-              <li>Password: <code>KAS2025Arb</code></li>
-              <li>Trading involves real/demo funds - use carefully</li>
-            </ul>
-          </div>
         </div>
       </section>
     );
