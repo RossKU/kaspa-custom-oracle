@@ -289,6 +289,10 @@ export class BingXAPI {
   /**
    * Place order (Market or Limit)
    * BingX Perpetual Futures uses V2 API: /openApi/swap/v2/trade/order
+   *
+   * Smart position side detection:
+   * - Buy order: Checks for SHORT position first (to close), otherwise opens LONG
+   * - Sell order: Checks for LONG position first (to close), otherwise opens SHORT
    */
   async placeOrder(params: {
     symbol: string;
@@ -298,12 +302,50 @@ export class BingXAPI {
     price?: string;
   }): Promise<OrderResponse> {
     try {
+      // Get current position to determine if we're opening or closing
+      const currentPosition = await this.getPosition(params.symbol);
+      const currentAmt = currentPosition ? parseFloat(currentPosition.positionAmt || currentPosition.availableAmt || '0') : 0;
+
+      let positionSide: string;
+
+      if (params.side === 'Buy') {
+        // BUY order logic:
+        // - If SHORT position exists (amt < 0) → Close SHORT
+        // - If no position or LONG exists → Open LONG
+        if (currentAmt < 0) {
+          positionSide = 'SHORT'; // Closing SHORT position
+          logger.info('BingX API', 'BUY order will close existing SHORT position', {
+            currentPositionAmt: currentAmt
+          });
+        } else {
+          positionSide = 'LONG'; // Opening new LONG or adding to LONG
+          logger.info('BingX API', 'BUY order will open/add to LONG position', {
+            currentPositionAmt: currentAmt
+          });
+        }
+      } else {
+        // SELL order logic:
+        // - If LONG position exists (amt > 0) → Close LONG
+        // - If no position or SHORT exists → Open SHORT
+        if (currentAmt > 0) {
+          positionSide = 'LONG'; // Closing LONG position
+          logger.info('BingX API', 'SELL order will close existing LONG position', {
+            currentPositionAmt: currentAmt
+          });
+        } else {
+          positionSide = 'SHORT'; // Opening new SHORT or adding to SHORT
+          logger.info('BingX API', 'SELL order will open/add to SHORT position', {
+            currentPositionAmt: currentAmt
+          });
+        }
+      }
+
       const orderParams: Record<string, any> = {
         symbol: params.symbol,
         side: params.side.toUpperCase(),
         type: params.orderType.toUpperCase(),
         quantity: params.qty,
-        positionSide: 'LONG' // Default to LONG position
+        positionSide // Dynamically determined based on current position
         // Note: marginCoin is automatically determined by BingX based on account type
         // Demo accounts use VST, production accounts use USDT
         // Do NOT specify marginCoin parameter
@@ -312,6 +354,8 @@ export class BingXAPI {
       if (params.orderType === 'Limit' && params.price) {
         orderParams.price = params.price;
       }
+
+      logger.info('BingX API', 'Placing order with smart position side detection', orderParams);
 
       // Use V2 API endpoint for perpetual futures
       const response = await this.request('POST', '/openApi/swap/v2/trade/order', orderParams);
