@@ -30,8 +30,13 @@ export class BybitAPI {
 
   constructor(config: BybitConfig) {
     this.config = config;
+    // Bybit has 3 environments - each requires matching API key:
+    // 1. Production (api.bybit.com) - requires Production API key
+    // 2. Demo Trading (api-demo.bybit.com) - requires Demo Trading API key from bybit.com
+    // 3. Testnet (api-testnet.bybit.com) - requires Testnet API key from testnet.bybit.com
+    // Currently using Demo Trading endpoint for testing
     this.baseUrl = config.testnet
-      ? 'https://api-testnet.bybit.com'
+      ? 'https://api-demo.bybit.com'
       : 'https://api.bybit.com';
   }
 
@@ -193,9 +198,9 @@ export class BybitAPI {
       });
 
       // Use account info endpoint to test connection
-      // Changed from UNIFIED to CONTRACT for Testnet compatibility
+      // Demo Trading only supports UNIFIED account type
       const response = await this.request('GET', '/v5/account/wallet-balance', {
-        accountType: 'CONTRACT'
+        accountType: 'UNIFIED'
       });
 
       const success = response.retCode === 0;
@@ -224,9 +229,9 @@ export class BybitAPI {
     try {
       logger.info('Bybit API', 'Fetching account balance...');
 
-      // Changed from UNIFIED to CONTRACT for Testnet compatibility
+      // Demo Trading only supports UNIFIED account type
       const response = await this.request('GET', '/v5/account/wallet-balance', {
-        accountType: 'CONTRACT'
+        accountType: 'UNIFIED'
       });
 
       if (response.retCode !== 0) {

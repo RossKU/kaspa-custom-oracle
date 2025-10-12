@@ -27,16 +27,16 @@ export function ApiTab() {
 
   // Load from localStorage
   useEffect(() => {
-    // ⚠️ TEMPORARY: Hardcoded API keys for debugging - REMOVE BEFORE COMMIT!
+    // ⚠️ TEMPORARY: Hardcoded Production Demo Trading API keys - REMOVE BEFORE COMMIT!
     const TEMP_TEST_CONFIG = {
       exchange: 'bybit',
-      apiKey: 'QlwoI0scFSBwc4cMKp',
-      apiSecret: 'bR83gZgEt0qS6kBeB6fcXNfA3EMCkih6QJtO',
-      testnet: true
+      apiKey: 'bgmGYEfrJxvOEU5MNs',
+      apiSecret: 'qG9c8UHs1yM9IXEb9VyPPXCgNfS55vqGvwCU',
+      testnet: true  // Will use Demo Trading endpoint when true
     };
 
     setConfig(TEMP_TEST_CONFIG);
-    logger.warn('API Tab', '⚠️ Using HARDCODED test API keys - FOR DEBUGGING ONLY!', TEMP_TEST_CONFIG);
+    logger.warn('API Tab', '⚠️ Using HARDCODED Production Demo Trading API keys - FOR DEBUGGING ONLY!', TEMP_TEST_CONFIG);
 
     /* Original code - temporarily disabled
     const saved = localStorage.getItem('apiConfig');
