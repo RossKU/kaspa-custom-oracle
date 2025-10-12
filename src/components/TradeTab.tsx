@@ -291,37 +291,47 @@ export function TradeTab() {
         <div style={{ borderTop: '1px solid #ddd', paddingTop: '15px', marginTop: '15px' }}>
           <div style={{ marginBottom: '15px' }}>
             <label style={{ fontWeight: 'bold', display: 'block', marginBottom: '8px' }}>
-              実行条件（取引所Aで買い、Bで売り）:
+              SL A買いB売り利用制時:
             </label>
-            <div style={{ display: 'flex', gap: '10px', alignItems: 'center', paddingLeft: '20px' }}>
-              <span style={{ width: '120px' }}>スプレッド閾値:</span>
-              <input type="number" defaultValue="0.5" step="0.1" style={{ width: '60px', padding: '4px', border: '1px solid #ccc' }} />
-              <span>%</span>
+            <div style={{ display: 'flex', gap: '8px', alignItems: 'center', paddingLeft: '10px', fontSize: '13px' }}>
+              <input type="number" defaultValue="0.2" step="0.1" style={{ width: '50px', padding: '4px', border: '1px solid #ccc' }} />
+              <span>% IN</span>
               <input type="number" defaultValue="0" style={{ width: '50px', padding: '4px', border: '1px solid #ccc' }} />
-              <select style={{ width: '80px', padding: '4px', border: '1px solid #ccc' }}>
+              <input type="number" defaultValue="0.2" step="0.1" style={{ width: '50px', padding: '4px', border: '1px solid #ccc' }} />
+              <span>% OUT</span>
+              <input type="number" defaultValue="-0.6" step="0.1" style={{ width: '60px', padding: '4px', border: '1px solid #ccc' }} />
+              <span style={{ fontSize: '11px', color: '#666' }}>Gap</span>
+              <input type="number" defaultValue="0" style={{ width: '40px', padding: '4px', border: '1px solid #ccc' }} />
+              <select style={{ width: '70px', padding: '4px', border: '1px solid #ccc' }}>
                 <option>300</option>
                 <option>600</option>
                 <option selected>900</option>
               </select>
-              <button style={{ padding: '4px 8px', border: '1px solid #999', background: '#d4edda', cursor: 'pointer' }}>有効</button>
+              <span style={{ fontSize: '11px', background: '#e9ecef', padding: '4px 8px', border: '1px solid #ccc' }}>S左M両</span>
+              <button style={{ padding: '4px 8px', border: '1px solid #999', background: '#d4edda', cursor: 'pointer', fontSize: '11px' }}>自動</button>
             </div>
           </div>
 
           <div>
             <label style={{ fontWeight: 'bold', display: 'block', marginBottom: '8px' }}>
-              実行条件（取引所Bで買い、Aで売り）:
+              SL B買いA売り利用制時:
             </label>
-            <div style={{ display: 'flex', gap: '10px', alignItems: 'center', paddingLeft: '20px' }}>
-              <span style={{ width: '120px' }}>スプレッド閾値:</span>
-              <input type="number" defaultValue="0.5" step="0.1" style={{ width: '60px', padding: '4px', border: '1px solid #ccc' }} />
-              <span>%</span>
+            <div style={{ display: 'flex', gap: '8px', alignItems: 'center', paddingLeft: '10px', fontSize: '13px' }}>
+              <input type="number" defaultValue="0.2" step="0.1" style={{ width: '50px', padding: '4px', border: '1px solid #ccc' }} />
+              <span>% IN</span>
               <input type="number" defaultValue="0" style={{ width: '50px', padding: '4px', border: '1px solid #ccc' }} />
-              <select style={{ width: '80px', padding: '4px', border: '1px solid #ccc' }}>
+              <input type="number" defaultValue="0.2" step="0.1" style={{ width: '50px', padding: '4px', border: '1px solid #ccc' }} />
+              <span>% OUT</span>
+              <input type="number" defaultValue="-0.7" step="0.1" style={{ width: '60px', padding: '4px', border: '1px solid #ccc' }} />
+              <span style={{ fontSize: '11px', color: '#666' }}>Gap</span>
+              <input type="number" defaultValue="0" style={{ width: '40px', padding: '4px', border: '1px solid #ccc' }} />
+              <select style={{ width: '70px', padding: '4px', border: '1px solid #ccc' }}>
                 <option>300</option>
                 <option>600</option>
                 <option selected>900</option>
               </select>
-              <button style={{ padding: '4px 8px', border: '1px solid #999', background: '#d4edda', cursor: 'pointer' }}>有効</button>
+              <span style={{ fontSize: '11px', background: '#e9ecef', padding: '4px 8px', border: '1px solid #ccc' }}>M右S両</span>
+              <button style={{ padding: '4px 8px', border: '1px solid #999', background: '#d4edda', cursor: 'pointer', fontSize: '11px' }}>自動</button>
             </div>
           </div>
         </div>
