@@ -24,6 +24,16 @@ interface OrderResponse {
   status: string;
 }
 
+interface OrderBookEntry {
+  price: number;
+  quantity: number;
+}
+
+interface OrderBookResponse {
+  bids: OrderBookEntry[];  // Buy orders, sorted descending by price
+  asks: OrderBookEntry[];  // Sell orders, sorted ascending by price
+}
+
 export class BybitAPI {
   private config: BybitConfig;
   private baseUrl: string;
@@ -185,6 +195,101 @@ export class BybitAPI {
     });
 
     return jsonResponse;
+  }
+
+  /**
+   * Make public (unsigned) request to Bybit API
+   * Used for market data endpoints that don't require authentication
+   */
+  private async publicRequest(
+    method: 'GET',
+    endpoint: string,
+    params: Record<string, any> = {}
+  ): Promise<any> {
+    logger.info('Bybit API', `Public Request ${method} ${endpoint}`, { params });
+
+    let url = `${this.baseUrl}${endpoint}`;
+    const searchParams = new URLSearchParams(params);
+    const queryString = searchParams.toString();
+    if (queryString) {
+      url += `?${queryString}`;
+    }
+
+    const response = await fetch(url, {
+      method,
+      headers: {
+        'Content-Type': 'application/json'
+      }
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      logger.error('Bybit API', 'Public Request Failed', {
+        status: response.status,
+        errorText
+      });
+      throw new Error(`Bybit API error: ${response.status} - ${errorText}`);
+    }
+
+    const jsonResponse = await response.json();
+    logger.debug('Bybit API', 'Public Response', {
+      retCode: jsonResponse.retCode,
+      retMsg: jsonResponse.retMsg
+    });
+
+    return jsonResponse;
+  }
+
+  /**
+   * Get Order Book (Market Depth)
+   * @param symbol Trading pair (e.g., 'KASUSDT')
+   * @param limit Depth limit (1-200 for spot, 1-500 for linear, default: 25)
+   * @returns Order book with bids and asks
+   */
+  async getOrderBook(symbol: string, limit: number = 50): Promise<OrderBookResponse> {
+    try {
+      logger.info('Bybit API', 'Fetching order book...', { symbol, limit });
+
+      const response = await this.publicRequest('GET', '/v5/market/orderbook', {
+        category: 'linear',
+        symbol,
+        limit: Math.min(limit, 500).toString() // Max 500 for linear
+      });
+
+      if (response.retCode !== 0) {
+        throw new Error(response.retMsg || 'Failed to fetch order book');
+      }
+
+      // Parse order book data
+      // Bybit format: { b: [["price", "qty"], ...], a: [["price", "qty"], ...] }
+      const rawBids = response.result.b || [];
+      const rawAsks = response.result.a || [];
+
+      const bids: OrderBookEntry[] = rawBids.map((entry: string[]) => ({
+        price: parseFloat(entry[0]),
+        quantity: parseFloat(entry[1])
+      }));
+
+      const asks: OrderBookEntry[] = rawAsks.map((entry: string[]) => ({
+        price: parseFloat(entry[0]),
+        quantity: parseFloat(entry[1])
+      }));
+
+      logger.info('Bybit API', 'Order book fetched', {
+        symbol,
+        bidsCount: bids.length,
+        asksCount: asks.length,
+        bestBid: bids[0]?.price,
+        bestAsk: asks[0]?.price
+      });
+
+      return { bids, asks };
+    } catch (error) {
+      logger.error('Bybit API', 'Failed to fetch order book', {
+        error: error instanceof Error ? error.message : String(error)
+      });
+      throw error;
+    }
   }
 
   /**

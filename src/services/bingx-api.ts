@@ -30,6 +30,16 @@ interface OrderResponse {
   status: string;
 }
 
+interface OrderBookEntry {
+  price: number;
+  quantity: number;
+}
+
+interface OrderBookResponse {
+  bids: OrderBookEntry[];  // Buy orders, sorted descending by price
+  asks: OrderBookEntry[];  // Sell orders, sorted ascending by price
+}
+
 export class BingXAPI {
   private config: BingXConfig;
   private baseUrl: string;
@@ -205,6 +215,103 @@ export class BingXAPI {
     });
 
     return jsonResponse;
+  }
+
+  /**
+   * Make public (unsigned) request to BingX API
+   * Used for market data endpoints that don't require authentication
+   */
+  private async publicRequest(
+    method: 'GET',
+    endpoint: string,
+    params: Record<string, any> = {}
+  ): Promise<any> {
+    logger.info('BingX API', `Public Request ${method} ${endpoint}`, { params });
+
+    let url = `${this.baseUrl}${endpoint}`;
+    const searchParams = new URLSearchParams(params);
+    const queryString = searchParams.toString();
+    if (queryString) {
+      url += `?${queryString}`;
+    }
+
+    // Use CORS proxy for browser access
+    const proxiedUrl = CORS_PROXY + encodeURIComponent(url);
+
+    const response = await fetch(proxiedUrl, {
+      method,
+      headers: {
+        'Content-Type': 'application/json'
+      }
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      logger.error('BingX API', 'Public Request Failed', {
+        status: response.status,
+        errorText
+      });
+      throw new Error(`BingX API error: ${response.status} - ${errorText}`);
+    }
+
+    const jsonResponse = await response.json();
+    logger.debug('BingX API', 'Public Response', {
+      code: jsonResponse.code,
+      msg: jsonResponse.msg
+    });
+
+    return jsonResponse;
+  }
+
+  /**
+   * Get Order Book (Market Depth)
+   * @param symbol Trading pair (e.g., 'KAS-USDT')
+   * @param limit Depth limit (default: 20, max: 100)
+   * @returns Order book with bids and asks
+   */
+  async getOrderBook(symbol: string, limit: number = 20): Promise<OrderBookResponse> {
+    try {
+      logger.info('BingX API', 'Fetching order book...', { symbol, limit });
+
+      const response = await this.publicRequest('GET', '/openApi/swap/v2/quote/depth', {
+        symbol,
+        limit: Math.min(limit, 100).toString() // Max 100
+      });
+
+      if (response.code !== 0) {
+        throw new Error(response.msg || 'Failed to fetch order book');
+      }
+
+      // Parse order book data
+      // BingX format: { bids: [["price", "quantity"], ...], asks: [["price", "quantity"], ...] }
+      const rawBids = response.data?.bids || [];
+      const rawAsks = response.data?.asks || [];
+
+      const bids: OrderBookEntry[] = rawBids.map((entry: any[]) => ({
+        price: parseFloat(entry[0]),
+        quantity: parseFloat(entry[1])
+      }));
+
+      const asks: OrderBookEntry[] = rawAsks.map((entry: any[]) => ({
+        price: parseFloat(entry[0]),
+        quantity: parseFloat(entry[1])
+      }));
+
+      logger.info('BingX API', 'Order book fetched', {
+        symbol,
+        bidsCount: bids.length,
+        asksCount: asks.length,
+        bestBid: bids[0]?.price,
+        bestAsk: asks[0]?.price
+      });
+
+      return { bids, asks };
+    } catch (error) {
+      logger.error('BingX API', 'Failed to fetch order book', {
+        error: error instanceof Error ? error.message : String(error)
+      });
+      throw error;
+    }
   }
 
   /**
