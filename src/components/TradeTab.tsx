@@ -197,30 +197,64 @@ export function TradeTab(props: TradeTabProps) {
   useEffect(() => {
     if (authState.isAuthenticated) {
       try {
-        const apiConfig = localStorage.getItem('apiConfig');
-        if (apiConfig) {
-          const parsed = JSON.parse(apiConfig);
-          if (parsed.exchange === 'bybit') {
-            logger.info('Trade Tab', 'Bybit API config loaded', {
-              hasApiKey: !!parsed.apiKey,
-              apiKeyLength: parsed.apiKey?.length || 0,
-              hasApiSecret: !!parsed.apiSecret,
-              apiSecretLength: parsed.apiSecret?.length || 0,
-              testnet: parsed.testnet
-            });
+        logger.info('Trade Tab', 'Attempting to load Bybit API config from localStorage');
 
-            const api = new BybitAPI({
-              apiKey: parsed.apiKey,
-              apiSecret: parsed.apiSecret,
-              testnet: parsed.testnet
-            });
-            setBybitApi(api);
-            logger.info('Trade Tab', '✅ Bybit API initialized successfully');
+        // Try loading from bybit_api_config first (new format)
+        let savedConfig = localStorage.getItem('bybit_api_config');
+        let configSource = 'bybit_api_config';
+
+        // If not found, try apiConfig with exchange = bybit (backward compatibility)
+        if (!savedConfig) {
+          const apiConfig = localStorage.getItem('apiConfig');
+          logger.info('Trade Tab', 'bybit_api_config not found, trying apiConfig', {
+            apiConfigExists: !!apiConfig
+          });
+
+          if (apiConfig) {
+            const parsed = JSON.parse(apiConfig);
+            if (parsed.exchange === 'bybit') {
+              savedConfig = JSON.stringify({
+                apiKey: parsed.apiKey,
+                apiSecret: parsed.apiSecret,
+                testnet: parsed.testnet
+              });
+              configSource = 'apiConfig (bybit)';
+            } else {
+              logger.warn('Trade Tab', 'apiConfig exists but exchange is not bybit', {
+                exchange: parsed.exchange
+              });
+            }
           }
+        }
+
+        if (savedConfig) {
+          const config = JSON.parse(savedConfig);
+          logger.info('Trade Tab', 'Bybit API config loaded', {
+            source: configSource,
+            hasApiKey: !!config.apiKey,
+            apiKeyLength: config.apiKey?.length || 0,
+            hasApiSecret: !!config.apiSecret,
+            apiSecretLength: config.apiSecret?.length || 0,
+            testnet: config.testnet
+          });
+
+          const api = new BybitAPI({
+            apiKey: config.apiKey,
+            apiSecret: config.apiSecret,
+            testnet: config.testnet
+          });
+          setBybitApi(api);
+          logger.info('Trade Tab', '✅ Bybit API initialized successfully');
+        } else {
+          logger.warn('Trade Tab', 'No Bybit API configuration found in localStorage', {
+            bybit_api_config: !!localStorage.getItem('bybit_api_config'),
+            apiConfig: !!localStorage.getItem('apiConfig')
+          });
         }
       } catch (error) {
         logger.error('Trade Tab', 'Failed to initialize Bybit API', {
-          error: error instanceof Error ? error.message : String(error)
+          error: error instanceof Error ? error.message : String(error),
+          stack: error instanceof Error ? error.stack : undefined
         });
       }
     }
