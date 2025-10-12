@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import BybitAPI from '../services/bybit-api';
 
 interface ApiConfig {
   exchange: string;
@@ -44,18 +45,41 @@ export function ApiTab() {
   const handleTestConnection = async () => {
     setStatus({ connected: false, message: '⏳ Testing connection...' });
 
-    // TODO: Implement actual API test
-    setTimeout(() => {
-      if (config.apiKey && config.apiSecret) {
-        setStatus({
-          connected: true,
-          message: '✅ Connected to Bybit Testnet',
-          balance: { USDT: 10000, KAS: 0 }
-        });
-      } else {
-        setStatus({ connected: false, message: '❌ Please enter API Key and Secret' });
+    if (!config.apiKey || !config.apiSecret) {
+      setStatus({ connected: false, message: '❌ Please enter API Key and Secret' });
+      return;
+    }
+
+    try {
+      const api = new BybitAPI({
+        apiKey: config.apiKey,
+        apiSecret: config.apiSecret,
+        testnet: config.testnet
+      });
+
+      // Test connection
+      const isConnected = await api.testConnection();
+
+      if (!isConnected) {
+        setStatus({ connected: false, message: '❌ Connection failed. Check your API credentials.' });
+        return;
       }
-    }, 1000);
+
+      // Get balance
+      const balance = await api.getBalance();
+
+      setStatus({
+        connected: true,
+        message: `✅ Connected to Bybit ${config.testnet ? 'Testnet' : 'Mainnet'}`,
+        balance
+      });
+    } catch (error) {
+      console.error('Connection test error:', error);
+      setStatus({
+        connected: false,
+        message: `❌ Error: ${error instanceof Error ? error.message : 'Unknown error'}`
+      });
+    }
   };
 
   const handleClearKeys = () => {
