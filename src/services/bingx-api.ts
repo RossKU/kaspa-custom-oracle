@@ -4,6 +4,10 @@
 
 import { logger } from '../utils/logger';
 
+// CORS proxy (temporary solution for browser-based testing)
+// BingX API does not allow direct browser access due to CORS policy
+const CORS_PROXY = 'https://corsproxy.io/?';
+
 interface BingXConfig {
   apiKey: string;
   apiSecret: string;
@@ -156,7 +160,15 @@ export class BingXAPI {
       paramString: paramString.length > 200 ? paramString.substring(0, 200) + '...' : paramString
     });
 
-    const response = await fetch(url, {
+    // Use CORS proxy to bypass browser restrictions
+    const proxiedUrl = CORS_PROXY + encodeURIComponent(url);
+
+    logger.debug('BingX API', 'Using CORS proxy', {
+      originalUrl: url,
+      proxiedUrl: proxiedUrl.substring(0, 100) + '...'
+    });
+
+    const response = await fetch(proxiedUrl, {
       method,
       headers,
       body: method === 'POST' ? body : undefined
@@ -240,13 +252,16 @@ export class BingXAPI {
         throw new Error(response.msg || 'Failed to fetch balance');
       }
 
-      const data = response.data?.balance || {};
+      // BingX returns an array of asset balances
+      const balances = response.data || [];
 
-      // BingX returns balance in asset-specific format
-      // Extract USDT and KAS if available
+      // Find USDT balance
+      const usdtAsset = balances.find((b: any) => b.asset === 'USDT');
+      const kasAsset = balances.find((b: any) => b.asset === 'KAS');
+
       const balance = {
-        USDT: parseFloat(data.availableMargin || '0'),
-        KAS: 0 // BingX contract balance doesn't show KAS separately - would need spot endpoint
+        USDT: parseFloat(usdtAsset?.availableBalance || usdtAsset?.balance || '0'),
+        KAS: parseFloat(kasAsset?.availableBalance || kasAsset?.balance || '0')
       };
 
       logger.info('BingX API', 'Balance fetched successfully', balance);
