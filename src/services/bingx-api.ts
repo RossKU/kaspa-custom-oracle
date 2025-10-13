@@ -287,13 +287,6 @@ export class BingXAPI {
       const rawBids = response.data?.bids || [];
       const rawAsks = response.data?.asks || [];
 
-      // Log raw asks BEFORE sorting (first 5 and last 5)
-      logger.debug('BingX API', 'Raw Asks BEFORE sorting', {
-        count: rawAsks.length,
-        first5: rawAsks.slice(0, 5).map((a: any[]) => ({ price: parseFloat(a[0]), qty: parseFloat(a[1]) })),
-        last5: rawAsks.slice(-5).map((a: any[]) => ({ price: parseFloat(a[0]), qty: parseFloat(a[1]) }))
-      });
-
       const bids: OrderBookEntry[] = rawBids.map((entry: any[]) => ({
         price: parseFloat(entry[0]),
         quantity: parseFloat(entry[1])
@@ -303,13 +296,6 @@ export class BingXAPI {
         price: parseFloat(entry[0]),
         quantity: parseFloat(entry[1])
       })).sort((a: OrderBookEntry, b: OrderBookEntry) => a.price - b.price); // Sort ascending by price
-
-      // Log asks AFTER sorting (first 5 and last 5)
-      logger.debug('BingX API', 'Asks AFTER sorting', {
-        count: asks.length,
-        first5: asks.slice(0, 5),
-        last5: asks.slice(-5)
-      });
 
       logger.info('BingX API', 'Order book fetched', {
         symbol,

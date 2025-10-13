@@ -412,22 +412,9 @@ export function TradeTab(props: TradeTabProps) {
         const bingxAskOffset = (bingxEffective.effectiveAsk || 0) - (bingxEffective.bestAsk || 0);
 
         logger.info('Trade Tab', 'Slippage offsets calculated', {
-          bybit: {
-            bestBid: bybitEffective.bestBid,
-            effectiveBid: bybitEffective.effectiveBid,
-            bidOffset: bybitBidOffset,
-            bestAsk: bybitEffective.bestAsk,
-            effectiveAsk: bybitEffective.effectiveAsk,
-            askOffset: bybitAskOffset
-          },
-          bingx: {
-            bestBid: bingxEffective.bestBid,
-            effectiveBid: bingxEffective.effectiveBid,
-            bidOffset: bingxBidOffset,
-            bestAsk: bingxEffective.bestAsk,
-            effectiveAsk: bingxEffective.effectiveAsk,
-            askOffset: bingxAskOffset
-          }
+          quantity,
+          bybit: { bidOffset: bybitBidOffset, askOffset: bybitAskOffset },
+          bingx: { bidOffset: bingxBidOffset, askOffset: bingxAskOffset }
         });
 
         // Update state

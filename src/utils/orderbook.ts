@@ -3,6 +3,8 @@
  * Calculate effective prices based on order quantity and market depth
  */
 
+import { logger } from './logger';
+
 export interface OrderBookEntry {
   price: number;
   quantity: number;
@@ -43,34 +45,17 @@ export function calculateEffectiveAsk(
 
   // If we couldn't fill the entire order, return null (insufficient liquidity)
   if (remainingQty > 0) {
-    if (quantity >= 10000) {
-      console.log('[calculateEffectiveAsk] Insufficient liquidity', {
-        quantity,
-        remainingQty,
-        levelsConsumed,
-        asksCount: asks.length
-      });
-    }
+    logger.warn('Order Book', 'Insufficient liquidity for effective ask calculation', {
+      quantity,
+      remainingQty,
+      levelsConsumed,
+      asksCount: asks.length
+    });
     return null;
   }
 
-  const result = useWorstCase ? worstPrice : totalCost / quantity;
-
-  // Debug log for large quantities
-  if (quantity >= 10000) {
-    console.log('[calculateEffectiveAsk] Calculation complete', {
-      quantity,
-      levelsConsumed,
-      firstAsk: asks[0],
-      lastConsumed: asks[levelsConsumed - 1],
-      worstPrice,
-      weightedAvg: totalCost / quantity,
-      useWorstCase,
-      result
-    });
-  }
-
-  return result;
+  // Return worst-case price (most conservative) or weighted average
+  return useWorstCase ? worstPrice : totalCost / quantity;
 }
 
 /**
@@ -135,21 +120,6 @@ export function calculateEffectivePrices(
   const effectiveBid = calculateEffectiveBid(orderBook.bids, quantity, useWorstCase);
   const bestAsk = orderBook.asks[0]?.price || null;
   const effectiveAsk = calculateEffectiveAsk(orderBook.asks, quantity, useWorstCase);
-
-  // Debug log for large quantities to trace calculation
-  if (quantity >= 10000) {
-    console.log('[Order Book Calculation]', {
-      quantity,
-      asks: {
-        count: orderBook.asks.length,
-        first3: orderBook.asks.slice(0, 3),
-        last3: orderBook.asks.slice(-3),
-        bestAsk,
-        effectiveAsk,
-        offset: effectiveAsk && bestAsk ? effectiveAsk - bestAsk : null
-      }
-    });
-  }
 
   return {
     bestBid,
