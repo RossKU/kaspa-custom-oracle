@@ -1022,8 +1022,8 @@ export function TradeTab(props: TradeTabProps) {
               <button style={{
                 padding: '4px 8px',
                 border: '1px solid #999',
-                background: triggerA.enabled ? '#dc3545' : '#e9ecef',
-                color: triggerA.enabled ? 'white' : '#666',
+                background: (triggerA.enabled && monitorStatusA.isMonitoring) ? '#dc3545' : '#e9ecef',
+                color: (triggerA.enabled && monitorStatusA.isMonitoring) ? 'white' : '#666',
                 cursor: 'default',
                 fontSize: '11px'
               }}>
@@ -1080,8 +1080,8 @@ export function TradeTab(props: TradeTabProps) {
               <button style={{
                 padding: '4px 8px',
                 border: '1px solid #999',
-                background: triggerB.enabled ? '#dc3545' : '#e9ecef',
-                color: triggerB.enabled ? 'white' : '#666',
+                background: (triggerB.enabled && monitorStatusB.isMonitoring) ? '#dc3545' : '#e9ecef',
+                color: (triggerB.enabled && monitorStatusB.isMonitoring) ? 'white' : '#666',
                 cursor: 'default',
                 fontSize: '11px'
               }}>
