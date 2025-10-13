@@ -65,6 +65,32 @@ export function TradeTab(props: TradeTabProps) {
     askOffset: 0
   });
 
+  // Auto-trading trigger conditions
+  const [triggerA, setTriggerA] = useState({
+    inThreshold: 0.2,      // IN threshold (%) - entry or exit condition
+    outThreshold: 0.2,     // OUT threshold (%) - currently unused
+    duration: 900,         // Continuous time (ms)
+    enabled: false         // Auto-execution ON/OFF
+  });
+
+  const [triggerB, setTriggerB] = useState({
+    inThreshold: 0.2,
+    outThreshold: 0.2,
+    duration: 900,
+    enabled: false
+  });
+
+  // Monitor status for trigger detection
+  const [monitorStatusA, setMonitorStatusA] = useState({
+    startTime: null as number | null,
+    isMonitoring: false
+  });
+
+  const [monitorStatusB, setMonitorStatusB] = useState({
+    startTime: null as number | null,
+    isMonitoring: false
+  });
+
   // Get Bid/Ask prices from exchange name
   // For Bybit and BingX: adds slippage offset calculated from Order Book depth
   const getExchangeData = (exchange: string): { bid: number; ask: number } | null => {
