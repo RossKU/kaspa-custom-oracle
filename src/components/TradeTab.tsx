@@ -341,8 +341,6 @@ export function TradeTab(props: TradeTabProps) {
     authState.isAuthenticated,
     monitorStatusA.isMonitoring,
     monitorStatusB.isMonitoring,
-    monitorStatusA.startTime,
-    monitorStatusB.startTime,
     gapABuyBSell,
     gapBBuyASell,
     triggerA,
