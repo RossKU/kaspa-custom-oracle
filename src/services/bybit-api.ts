@@ -268,12 +268,12 @@ export class BybitAPI {
       const bids: OrderBookEntry[] = rawBids.map((entry: string[]) => ({
         price: parseFloat(entry[0]),
         quantity: parseFloat(entry[1])
-      })).sort((a, b) => b.price - a.price); // Sort descending by price
+      })).sort((a: OrderBookEntry, b: OrderBookEntry) => b.price - a.price); // Sort descending by price
 
       const asks: OrderBookEntry[] = rawAsks.map((entry: string[]) => ({
         price: parseFloat(entry[0]),
         quantity: parseFloat(entry[1])
-      })).sort((a, b) => a.price - b.price); // Sort ascending by price
+      })).sort((a: OrderBookEntry, b: OrderBookEntry) => a.price - b.price); // Sort ascending by price
 
       logger.info('Bybit API', 'Order book fetched', {
         symbol,

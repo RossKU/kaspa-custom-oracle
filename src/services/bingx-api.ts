@@ -297,12 +297,12 @@ export class BingXAPI {
       const bids: OrderBookEntry[] = rawBids.map((entry: any[]) => ({
         price: parseFloat(entry[0]),
         quantity: parseFloat(entry[1])
-      })).sort((a, b) => b.price - a.price); // Sort descending by price
+      })).sort((a: OrderBookEntry, b: OrderBookEntry) => b.price - a.price); // Sort descending by price
 
       const asks: OrderBookEntry[] = rawAsks.map((entry: any[]) => ({
         price: parseFloat(entry[0]),
         quantity: parseFloat(entry[1])
-      })).sort((a, b) => a.price - b.price); // Sort ascending by price
+      })).sort((a: OrderBookEntry, b: OrderBookEntry) => a.price - b.price); // Sort ascending by price
 
       // Log asks AFTER sorting (first 5 and last 5)
       logger.debug('BingX API', 'Asks AFTER sorting', {
