@@ -404,32 +404,27 @@ export function TradeTab(props: TradeTabProps) {
         const bybitEffective = calculateEffectivePrices(bybitOrderBook, quantity, true);
         const bingxEffective = calculateEffectivePrices(bingxOrderBook, quantity, true);
 
-        // Get current WebSocket Best Bid/Ask
-        const bybitBestBid = props.bybitData?.bid || 0;
-        const bybitBestAsk = props.bybitData?.ask || 0;
-        const bingxBestBid = props.bingxData?.bid || 0;
-        const bingxBestAsk = props.bingxData?.ask || 0;
-
-        // Calculate offsets (difference between effective price and best price)
-        const bybitBidOffset = (bybitEffective.effectiveBid || bybitBestBid) - bybitBestBid;
-        const bybitAskOffset = (bybitEffective.effectiveAsk || bybitBestAsk) - bybitBestAsk;
-        const bingxBidOffset = (bingxEffective.effectiveBid || bingxBestBid) - bingxBestBid;
-        const bingxAskOffset = (bingxEffective.effectiveAsk || bingxBestAsk) - bingxBestAsk;
+        // Calculate offsets using Order Book's own Best Bid/Ask (same timestamp)
+        // This ensures we compare prices from the same moment, avoiding incorrect offsets
+        const bybitBidOffset = (bybitEffective.effectiveBid || 0) - (bybitEffective.bestBid || 0);
+        const bybitAskOffset = (bybitEffective.effectiveAsk || 0) - (bybitEffective.bestAsk || 0);
+        const bingxBidOffset = (bingxEffective.effectiveBid || 0) - (bingxEffective.bestBid || 0);
+        const bingxAskOffset = (bingxEffective.effectiveAsk || 0) - (bingxEffective.bestAsk || 0);
 
         logger.info('Trade Tab', 'Slippage offsets calculated', {
           bybit: {
-            bestBid: bybitBestBid,
+            bestBid: bybitEffective.bestBid,
             effectiveBid: bybitEffective.effectiveBid,
             bidOffset: bybitBidOffset,
-            bestAsk: bybitBestAsk,
+            bestAsk: bybitEffective.bestAsk,
             effectiveAsk: bybitEffective.effectiveAsk,
             askOffset: bybitAskOffset
           },
           bingx: {
-            bestBid: bingxBestBid,
+            bestBid: bingxEffective.bestBid,
             effectiveBid: bingxEffective.effectiveBid,
             bidOffset: bingxBidOffset,
-            bestAsk: bingxBestAsk,
+            bestAsk: bingxEffective.bestAsk,
             effectiveAsk: bingxEffective.effectiveAsk,
             askOffset: bingxAskOffset
           }

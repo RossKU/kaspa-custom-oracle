@@ -100,9 +100,16 @@ export function calculateEffectivePrices(
   orderBook: { bids: OrderBookEntry[]; asks: OrderBookEntry[] },
   quantity: number,
   useWorstCase: boolean = true
-): { effectiveBid: number | null; effectiveAsk: number | null } {
+): {
+  bestBid: number | null;
+  effectiveBid: number | null;
+  bestAsk: number | null;
+  effectiveAsk: number | null;
+} {
   return {
+    bestBid: orderBook.bids[0]?.price || null,
     effectiveBid: calculateEffectiveBid(orderBook.bids, quantity, useWorstCase),
+    bestAsk: orderBook.asks[0]?.price || null,
     effectiveAsk: calculateEffectiveAsk(orderBook.asks, quantity, useWorstCase)
   };
 }
