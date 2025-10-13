@@ -273,17 +273,15 @@ export function TradeTab(props: TradeTabProps) {
                   gapA,
                   duration: elapsed
                 });
-                // TODO: Execute trade A (Phase 5)
+                setMonitorStatusA({ startTime: null, isMonitoring: false });
+                handleManualTradeA();
               } else {
                 logger.info('Trade Tab', 'Monitor A: Manual confirmation required', {
                   gapA,
                   duration: elapsed
                 });
-                // TODO: Show confirmation dialog (Phase 5)
+                setMonitorStatusA({ startTime: null, isMonitoring: false });
               }
-
-              // Reset monitor after trigger
-              setMonitorStatusA({ startTime: null, isMonitoring: false });
             }
           }
         } else {
@@ -336,16 +334,15 @@ export function TradeTab(props: TradeTabProps) {
                   gapB,
                   duration: elapsed
                 });
-                // TODO: Execute trade B (Phase 5)
+                setMonitorStatusB({ startTime: null, isMonitoring: false });
+                handleManualTradeB();
               } else {
                 logger.info('Trade Tab', 'Monitor B: Manual confirmation required', {
                   gapB,
                   duration: elapsed
                 });
-                // TODO: Show confirmation dialog (Phase 5)
+                setMonitorStatusB({ startTime: null, isMonitoring: false });
               }
-
-              setMonitorStatusB({ startTime: null, isMonitoring: false });
             }
           }
         } else {
