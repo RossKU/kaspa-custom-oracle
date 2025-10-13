@@ -546,22 +546,27 @@ export function TradeTab(props: TradeTabProps) {
       return;
     }
 
-    logger.info('Trade Tab', 'Starting position fetcher (5s interval)');
-
     const fetchPositions = async () => {
       try {
-        logger.info('Trade Tab', 'Fetching positions...');
-        const allPositions = await bingxApi.getAllPositions();
+        const [bingxPositions, bybitPos] = await Promise.all([
+          bingxApi.getAllPositions(),
+          bybitApi ? bybitApi.getAllPositions() : Promise.resolve([])
+        ]);
+
         // Filter only open positions
-        const openPositions = allPositions.filter((p: any) => {
+        const openBingX = bingxPositions.filter((p: any) => {
           const amt = parseFloat(p.positionAmt || p.availableAmt || '0');
           return amt !== 0;
         });
-        logger.info('Trade Tab', 'Positions fetched', {
-          total: allPositions.length,
-          open: openPositions.length
+        const openBybit = bybitPos.filter((p: any) => parseFloat(p.size || '0') > 0);
+
+        logger.info('Trade Tab', '✅ Positions', {
+          bingx: openBingX.length,
+          bybit: openBybit.length
         });
-        setPositions(openPositions);
+
+        setPositions(openBingX);
+        setBybitPositions(openBybit);
       } catch (error) {
         logger.error('Trade Tab', 'Failed to fetch positions', {
           error: error instanceof Error ? error.message : String(error)
@@ -576,31 +581,7 @@ export function TradeTab(props: TradeTabProps) {
       logger.info('Trade Tab', 'Stopping position fetcher');
       clearInterval(interval);
     };
-  }, [bingxApi, authState.isAuthenticated]);
-
-  // Fetch Bybit positions periodically
-  useEffect(() => {
-    if (!bybitApi || !authState.isAuthenticated) {
-      return;
-    }
-
-    const fetchBybitPositions = async () => {
-      try {
-        const allPositions = await bybitApi.getAllPositions();
-        // Filter only open positions
-        const openPositions = allPositions.filter((p: any) => parseFloat(p.size) > 0);
-        setBybitPositions(openPositions);
-      } catch (error) {
-        logger.error('Trade Tab', 'Failed to fetch Bybit positions', {
-          error: error instanceof Error ? error.message : String(error)
-        });
-      }
-    };
-
-    fetchBybitPositions();
-    const interval = setInterval(fetchBybitPositions, 5000);
-    return () => clearInterval(interval);
-  }, [bybitApi, authState.isAuthenticated]);
+  }, [bingxApi, bybitApi, authState.isAuthenticated]);
 
   // Fetch Order Book depth and calculate slippage offset (every 5 seconds)
   // This calculates the difference between WebSocket Best Bid/Ask and Order Book Effective prices
@@ -612,16 +593,7 @@ export function TradeTab(props: TradeTabProps) {
     const fetchOrderBooksAndCalculateOffset = async () => {
       try {
         const quantity = parseFloat(tradeQuantity);
-        if (isNaN(quantity) || quantity <= 0) {
-          logger.warn('Trade Tab', 'Invalid trade quantity for order book analysis', {
-            tradeQuantity
-          });
-          return;
-        }
-
-        logger.info('Trade Tab', 'Fetching order books for slippage analysis...', {
-          quantity
-        });
+        if (isNaN(quantity) || quantity <= 0) return;
 
         // Fetch Order Books from both exchanges (in parallel)
         const [bybitOrderBook, bingxOrderBook] = await Promise.all([
@@ -634,16 +606,14 @@ export function TradeTab(props: TradeTabProps) {
         const bingxEffective = calculateEffectivePrices(bingxOrderBook, quantity, true);
 
         // Calculate offsets using Order Book's own Best Bid/Ask (same timestamp)
-        // This ensures we compare prices from the same moment, avoiding incorrect offsets
         const bybitBidOffset = (bybitEffective.effectiveBid || 0) - (bybitEffective.bestBid || 0);
         const bybitAskOffset = (bybitEffective.effectiveAsk || 0) - (bybitEffective.bestAsk || 0);
         const bingxBidOffset = (bingxEffective.effectiveBid || 0) - (bingxEffective.bestBid || 0);
         const bingxAskOffset = (bingxEffective.effectiveAsk || 0) - (bingxEffective.bestAsk || 0);
 
-        logger.info('Trade Tab', 'Slippage offsets calculated', {
-          quantity,
-          bybit: { bidOffset: bybitBidOffset, askOffset: bybitAskOffset },
-          bingx: { bidOffset: bingxBidOffset, askOffset: bingxAskOffset }
+        logger.info('Trade Tab', '✅ Slippage', {
+          bybit: { bid: bybitBidOffset.toFixed(5), ask: bybitAskOffset.toFixed(5) },
+          bingx: { bid: bingxBidOffset.toFixed(5), ask: bingxAskOffset.toFixed(5) }
         });
 
         // Update state
