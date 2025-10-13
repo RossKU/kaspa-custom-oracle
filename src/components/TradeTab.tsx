@@ -146,6 +146,16 @@ export function TradeTab(props: TradeTabProps) {
   const gapABuyBSell = calculateArbitrageGap(exchangeAData, exchangeBData); // A買いB売り (A ask → B bid)
   const gapBBuyASell = calculateArbitrageGap(exchangeBData, exchangeAData); // B買いA売り (B ask → A bid)
 
+  // Get current position state (for auto-trading)
+  const positionState = getPositionState();
+
+  // Log position state changes (debug only)
+  useEffect(() => {
+    if (authState.isAuthenticated) {
+      logger.debug('Trade Tab', 'Position state updated', { positionState });
+    }
+  }, [positionState, authState.isAuthenticated]);
+
   // Check session timeout
   useEffect(() => {
     if (authState.isAuthenticated && authState.lastAuthTime) {
