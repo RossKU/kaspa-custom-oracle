@@ -1263,7 +1263,13 @@ export function TradeTab(props: TradeTabProps) {
               SL A買いB売り利用制時:
             </label>
             <div style={{ display: 'flex', gap: '8px', alignItems: 'center', paddingLeft: '10px', fontSize: '13px' }}>
-              <input type="number" defaultValue="0.2" step="0.1" style={{ width: '50px', padding: '4px', border: '1px solid #ccc' }} />
+              <input
+                type="number"
+                value={triggerA.inThreshold}
+                onChange={(e) => setTriggerA({ ...triggerA, inThreshold: parseFloat(e.target.value) || 0 })}
+                step="0.01"
+                style={{ width: '50px', padding: '4px', border: '1px solid #ccc' }}
+              />
               <span>% IN</span>
               <input type="number" defaultValue="0" style={{ width: '50px', padding: '4px', border: '1px solid #ccc' }} />
               <input type="number" defaultValue="0.2" step="0.1" style={{ width: '50px', padding: '4px', border: '1px solid #ccc' }} />
@@ -1334,7 +1340,13 @@ export function TradeTab(props: TradeTabProps) {
               SL B買いA売り利用制時:
             </label>
             <div style={{ display: 'flex', gap: '8px', alignItems: 'center', paddingLeft: '10px', fontSize: '13px' }}>
-              <input type="number" defaultValue="0.2" step="0.1" style={{ width: '50px', padding: '4px', border: '1px solid #ccc' }} />
+              <input
+                type="number"
+                value={triggerB.inThreshold}
+                onChange={(e) => setTriggerB({ ...triggerB, inThreshold: parseFloat(e.target.value) || 0 })}
+                step="0.01"
+                style={{ width: '50px', padding: '4px', border: '1px solid #ccc' }}
+              />
               <span>% IN</span>
               <input type="number" defaultValue="0" style={{ width: '50px', padding: '4px', border: '1px solid #ccc' }} />
               <input type="number" defaultValue="0.2" step="0.1" style={{ width: '50px', padding: '4px', border: '1px solid #ccc' }} />
