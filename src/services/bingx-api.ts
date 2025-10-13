@@ -67,20 +67,6 @@ export class BingXAPI {
     // BingX signature format: HMAC_SHA256(parameters, secretKey)
     // Parameters include timestamp and all query params
 
-    logger.debug('BingX API', 'Signature Generation - Key Info', {
-      apiKeyLength: this.config.apiKey.length,
-      apiKeyFirst8: this.config.apiKey.substring(0, 8),
-      apiKeyLast4: this.config.apiKey.substring(this.config.apiKey.length - 4),
-      secretKeyLength: this.config.apiSecret.length,
-      secretKeyFirst4: this.config.apiSecret.substring(0, 4),
-      secretKeyLast4: this.config.apiSecret.substring(this.config.apiSecret.length - 4)
-    });
-
-    logger.debug('BingX API', 'Signature Generation - Payload', {
-      params,
-      paramsLength: params.length
-    });
-
     // Use Web Crypto API for HMAC SHA256
     const encoder = new TextEncoder();
     const keyData = encoder.encode(this.config.apiSecret);
@@ -98,13 +84,6 @@ export class BingXAPI {
     const hashArray = Array.from(new Uint8Array(signature));
     const hashHex = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
 
-    logger.debug('BingX API', 'Generated Signature - Full', {
-      signatureLength: hashHex.length,
-      signatureFirst16: hashHex.substring(0, 16),
-      signatureLast16: hashHex.substring(hashHex.length - 16),
-      fullSignature: hashHex
-    });
-
     return hashHex;
   }
 
@@ -118,8 +97,6 @@ export class BingXAPI {
   ): Promise<any> {
     const timestamp = Date.now().toString();
     const recvWindow = '5000';
-
-    logger.info('BingX API', `Request ${method} ${endpoint}`, { params });
 
     // Add timestamp and recvWindow to params
     const allParams: Record<string, any> = {
@@ -157,30 +134,8 @@ export class BingXAPI {
       headers['Content-Type'] = 'application/x-www-form-urlencoded';
     }
 
-    logger.debug('BingX API', 'Request Headers - Summary', {
-      url: url.split('?')[0], // Don't log full URL with params
-      method,
-      apiKeyPrefix: this.config.apiKey.substring(0, 8) + '...',
-      timestamp,
-      signaturePrefix: signature.substring(0, 16) + '...',
-      recvWindow
-    });
-
-    logger.debug('BingX API', 'Request Headers - Full', {
-      'X-BX-APIKEY': this.config.apiKey,
-      timestamp,
-      signature,
-      recvWindow,
-      paramString: paramString.length > 200 ? paramString.substring(0, 200) + '...' : paramString
-    });
-
     // Use CORS proxy to bypass browser restrictions
     const proxiedUrl = CORS_PROXY + encodeURIComponent(url);
-
-    logger.debug('BingX API', 'Using CORS proxy', {
-      originalUrl: url,
-      proxiedUrl: proxiedUrl.substring(0, 100) + '...'
-    });
 
     const response = await fetch(proxiedUrl, {
       method,
@@ -188,15 +143,9 @@ export class BingXAPI {
       body: method === 'POST' ? body : undefined
     });
 
-    logger.debug('BingX API', 'Response Status', {
-      status: response.status,
-      statusText: response.statusText,
-      ok: response.ok
-    });
-
     if (!response.ok) {
       const errorText = await response.text();
-      logger.error('BingX API', 'Request Failed', {
+      logger.error('BingX API', `Request failed: ${method} ${endpoint}`, {
         status: response.status,
         statusText: response.statusText,
         errorText
@@ -205,15 +154,6 @@ export class BingXAPI {
     }
 
     const jsonResponse = await response.json();
-    logger.debug('BingX API', 'Response Data', {
-      code: jsonResponse.code,
-      msg: jsonResponse.msg
-    });
-
-    logger.debug('BingX API', 'Full Response Body', {
-      fullResponse: JSON.stringify(jsonResponse, null, 2)
-    });
-
     return jsonResponse;
   }
 
@@ -226,8 +166,6 @@ export class BingXAPI {
     endpoint: string,
     params: Record<string, any> = {}
   ): Promise<any> {
-    logger.info('BingX API', `Public Request ${method} ${endpoint}`, { params });
-
     let url = `${this.baseUrl}${endpoint}`;
     const searchParams = new URLSearchParams(params);
     const queryString = searchParams.toString();
@@ -247,7 +185,7 @@ export class BingXAPI {
 
     if (!response.ok) {
       const errorText = await response.text();
-      logger.error('BingX API', 'Public Request Failed', {
+      logger.error('BingX API', `Public request failed: ${method} ${endpoint}`, {
         status: response.status,
         errorText
       });
@@ -255,11 +193,6 @@ export class BingXAPI {
     }
 
     const jsonResponse = await response.json();
-    logger.debug('BingX API', 'Public Response', {
-      code: jsonResponse.code,
-      msg: jsonResponse.msg
-    });
-
     return jsonResponse;
   }
 
@@ -271,8 +204,6 @@ export class BingXAPI {
    */
   async getOrderBook(symbol: string, limit: number = 20): Promise<OrderBookResponse> {
     try {
-      logger.info('BingX API', 'Fetching order book...', { symbol, limit });
-
       const response = await this.publicRequest('GET', '/openApi/swap/v2/quote/depth', {
         symbol,
         limit: Math.min(limit, 100).toString() // Max 100
@@ -296,14 +227,6 @@ export class BingXAPI {
         price: parseFloat(entry[0]),
         quantity: parseFloat(entry[1])
       })).sort((a: OrderBookEntry, b: OrderBookEntry) => a.price - b.price); // Sort ascending by price
-
-      logger.info('BingX API', 'Order book fetched', {
-        symbol,
-        bidsCount: bids.length,
-        asksCount: asks.length,
-        bestBid: bids[0]?.price,
-        bestAsk: asks[0]?.price
-      });
 
       return { bids, asks };
     } catch (error) {
@@ -489,26 +412,15 @@ export class BingXAPI {
    */
   async getAllPositions(): Promise<any[]> {
     try {
-      logger.info('BingX API', 'Fetching all positions...');
-
       const response = await this.request('GET', '/openApi/swap/v2/user/positions', {});
 
       if (response.code !== 0) {
-        logger.error('BingX API', 'Failed to fetch positions', {
-          code: response.code,
-          msg: response.msg
-        });
         throw new Error(response.msg || 'Failed to fetch positions');
       }
 
-      const positions = response.data || [];
-      logger.info('BingX API', 'Positions fetched successfully', {
-        count: positions.length
-      });
-
-      return positions;
+      return response.data || [];
     } catch (error) {
-      logger.error('BingX API', 'Get all positions exception', {
+      logger.error('BingX API', 'Failed to fetch positions', {
         error: error instanceof Error ? error.message : String(error)
       });
       throw error;
