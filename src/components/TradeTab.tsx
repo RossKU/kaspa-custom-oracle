@@ -837,7 +837,24 @@ export function TradeTab(props: TradeTabProps) {
               style={{ padding: '4px', border: '1px solid #ccc' }}
             />
             <span>KAS</span>
-            <button style={{ padding: '4px 12px', border: '1px solid #999', background: '#eee', cursor: 'pointer' }}>計算</button>
+            <button
+              onClick={() => {
+                const isCurrentlyMonitoring = monitorStatusA.isMonitoring || monitorStatusB.isMonitoring;
+                const newTime = isCurrentlyMonitoring ? null : Date.now();
+                const newStatus = !isCurrentlyMonitoring;
+                setMonitorStatusA({ startTime: newTime, isMonitoring: newStatus });
+                setMonitorStatusB({ startTime: newTime, isMonitoring: newStatus });
+              }}
+              style={{
+                padding: '4px 12px',
+                border: '1px solid #999',
+                background: (monitorStatusA.isMonitoring || monitorStatusB.isMonitoring) ? '#dc3545' : '#eee',
+                color: (monitorStatusA.isMonitoring || monitorStatusB.isMonitoring) ? 'white' : '#000',
+                cursor: 'pointer'
+              }}
+            >
+              計算
+            </button>
           </div>
 
           <div style={{ display: 'grid', gridTemplateColumns: '120px 80px', gap: '10px', alignItems: 'center', marginBottom: '8px' }}>
@@ -1001,22 +1018,7 @@ export function TradeTab(props: TradeTabProps) {
                   placeholder="ms"
                 />
               )}
-              <button
-                onClick={() => setMonitorStatusA({
-                  startTime: monitorStatusA.isMonitoring ? null : Date.now(),
-                  isMonitoring: !monitorStatusA.isMonitoring
-                })}
-                style={{
-                  padding: '4px 8px',
-                  border: '1px solid #999',
-                  background: monitorStatusA.isMonitoring ? '#dc3545' : '#d4edda',
-                  color: monitorStatusA.isMonitoring ? 'white' : '#000',
-                  cursor: 'pointer',
-                  fontSize: '11px'
-                }}
-              >
-                S売 M買
-              </button>
+              <span style={{ fontSize: '11px', background: '#e9ecef', padding: '4px 8px', border: '1px solid #ccc' }}>S売 M買</span>
               <button style={{
                 padding: '4px 8px',
                 border: '1px solid #999',
@@ -1074,22 +1076,7 @@ export function TradeTab(props: TradeTabProps) {
                   placeholder="ms"
                 />
               )}
-              <button
-                onClick={() => setMonitorStatusB({
-                  startTime: monitorStatusB.isMonitoring ? null : Date.now(),
-                  isMonitoring: !monitorStatusB.isMonitoring
-                })}
-                style={{
-                  padding: '4px 8px',
-                  border: '1px solid #999',
-                  background: monitorStatusB.isMonitoring ? '#dc3545' : '#d4edda',
-                  color: monitorStatusB.isMonitoring ? 'white' : '#000',
-                  cursor: 'pointer',
-                  fontSize: '11px'
-                }}
-              >
-                M売 S買
-              </button>
+              <span style={{ fontSize: '11px', background: '#e9ecef', padding: '4px 8px', border: '1px solid #ccc' }}>M売 S買</span>
               <button style={{
                 padding: '4px 8px',
                 border: '1px solid #999',
