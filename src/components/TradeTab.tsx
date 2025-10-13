@@ -194,6 +194,19 @@ export function TradeTab(props: TradeTabProps) {
     }
   }, [triggerA, triggerB, monitorStatusA, monitorStatusB, authState.isAuthenticated]);
 
+  // Reset monitor status when trigger is disabled
+  useEffect(() => {
+    if (!triggerA.enabled && monitorStatusA.isMonitoring) {
+      setMonitorStatusA({ startTime: null, isMonitoring: false });
+    }
+  }, [triggerA.enabled, monitorStatusA.isMonitoring]);
+
+  useEffect(() => {
+    if (!triggerB.enabled && monitorStatusB.isMonitoring) {
+      setMonitorStatusB({ startTime: null, isMonitoring: false });
+    }
+  }, [triggerB.enabled, monitorStatusB.isMonitoring]);
+
   // Check session timeout
   useEffect(() => {
     if (authState.isAuthenticated && authState.lastAuthTime) {
@@ -995,7 +1008,12 @@ export function TradeTab(props: TradeTabProps) {
                 />
               )}
               <span style={{ fontSize: '11px', background: '#e9ecef', padding: '4px 8px', border: '1px solid #ccc' }}>S左M両</span>
-              <button style={{ padding: '4px 8px', border: '1px solid #999', background: '#d4edda', cursor: 'pointer', fontSize: '11px' }}>自動</button>
+              <button
+                onClick={() => setTriggerA({ ...triggerA, enabled: !triggerA.enabled })}
+                style={{ padding: '4px 8px', border: '1px solid #999', background: '#d4edda', cursor: 'pointer', fontSize: '11px' }}
+              >
+                自動
+              </button>
             </div>
           </div>
 
@@ -1044,7 +1062,12 @@ export function TradeTab(props: TradeTabProps) {
                 />
               )}
               <span style={{ fontSize: '11px', background: '#e9ecef', padding: '4px 8px', border: '1px solid #ccc' }}>M右S両</span>
-              <button style={{ padding: '4px 8px', border: '1px solid #999', background: '#d4edda', cursor: 'pointer', fontSize: '11px' }}>自動</button>
+              <button
+                onClick={() => setTriggerB({ ...triggerB, enabled: !triggerB.enabled })}
+                style={{ padding: '4px 8px', border: '1px solid #999', background: '#d4edda', cursor: 'pointer', fontSize: '11px' }}
+              >
+                自動
+              </button>
             </div>
           </div>
         </div>
