@@ -1380,7 +1380,7 @@ export function TradeTab(props: TradeTabProps) {
             }}>
               {positions.map((position: any, index: number) => {
                 const amt = parseFloat(position.positionAmt || position.availableAmt || '0');
-                const positionSide = amt > 0 ? 'LONG' : 'SHORT';
+                const positionSide = position.positionSide; // Use API's positionSide field directly
                 const unrealizedProfit = parseFloat(position.unrealisedProfit || position.unRealizedProfit || '0');
 
                 return (
