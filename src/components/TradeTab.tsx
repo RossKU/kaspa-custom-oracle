@@ -10,6 +10,7 @@ import type { BingXPriceData } from '../services/bingx';
 import { logger } from '../utils/logger';
 import BingXAPI from '../services/bingx-api';
 import BybitAPI from '../services/bybit-api';
+import { calculateEffectivePrices } from '../utils/orderbook';
 
 interface TradeTabProps {
   binanceData: PriceData | null;
@@ -54,7 +55,18 @@ export function TradeTab(props: TradeTabProps) {
   const [triggerDurationBType, setTriggerDurationBType] = useState<'300' | '600' | '900' | 'custom'>('900');
   const [triggerDurationBCustom, setTriggerDurationBCustom] = useState('900');
 
+  // Slippage offset state (difference between WebSocket Best price and Order Book Effective price)
+  const [bybitSlippageOffset, setBybitSlippageOffset] = useState({
+    bidOffset: 0,  // Negative = slippage reduces bid price
+    askOffset: 0   // Positive = slippage increases ask price
+  });
+  const [bingxSlippageOffset, setBingxSlippageOffset] = useState({
+    bidOffset: 0,
+    askOffset: 0
+  });
+
   // Get Bid/Ask prices from exchange name
+  // For Bybit and BingX: adds slippage offset calculated from Order Book depth
   const getExchangeData = (exchange: string): { bid: number; ask: number } | null => {
     switch (exchange) {
       case 'Binance':
@@ -65,7 +77,11 @@ export function TradeTab(props: TradeTabProps) {
         return { bid: props.mexcData.price || 0, ask: props.mexcData.price || 0 };
       case 'Bybit':
         if (!props.bybitData) return null;
-        return { bid: props.bybitData.bid || 0, ask: props.bybitData.ask || 0 };
+        // Add slippage offset from Order Book depth analysis
+        return {
+          bid: (props.bybitData.bid || 0) + bybitSlippageOffset.bidOffset,
+          ask: (props.bybitData.ask || 0) + bybitSlippageOffset.askOffset
+        };
       case 'Gate.io':
         if (!props.gateioData) return null;
         return { bid: props.gateioData.price || 0, ask: props.gateioData.price || 0 };
@@ -74,7 +90,11 @@ export function TradeTab(props: TradeTabProps) {
         return { bid: props.kucoinData.price || 0, ask: props.kucoinData.price || 0 };
       case 'BingX':
         if (!props.bingxData) return null;
-        return { bid: props.bingxData.bid || 0, ask: props.bingxData.ask || 0 };
+        // Add slippage offset from Order Book depth analysis
+        return {
+          bid: (props.bingxData.bid || 0) + bingxSlippageOffset.bidOffset,
+          ask: (props.bingxData.ask || 0) + bingxSlippageOffset.askOffset
+        };
       default:
         return null;
     }
@@ -352,6 +372,96 @@ export function TradeTab(props: TradeTabProps) {
     const interval = setInterval(fetchBybitPositions, 5000);
     return () => clearInterval(interval);
   }, [bybitApi, authState.isAuthenticated]);
+
+  // Fetch Order Book depth and calculate slippage offset (every 5 seconds)
+  // This calculates the difference between WebSocket Best Bid/Ask and Order Book Effective prices
+  useEffect(() => {
+    if (!bybitApi || !bingxApi || !authState.isAuthenticated) {
+      return;
+    }
+
+    const fetchOrderBooksAndCalculateOffset = async () => {
+      try {
+        const quantity = parseFloat(tradeQuantity);
+        if (isNaN(quantity) || quantity <= 0) {
+          logger.warn('Trade Tab', 'Invalid trade quantity for order book analysis', {
+            tradeQuantity
+          });
+          return;
+        }
+
+        logger.info('Trade Tab', 'Fetching order books for slippage analysis...', {
+          quantity
+        });
+
+        // Fetch Order Books from both exchanges (in parallel)
+        const [bybitOrderBook, bingxOrderBook] = await Promise.all([
+          bybitApi.getOrderBook('KASUSDT', 50),
+          bingxApi.getOrderBook('KAS-USDT', 50)
+        ]);
+
+        // Calculate effective prices based on order quantity (worst-case)
+        const bybitEffective = calculateEffectivePrices(bybitOrderBook, quantity, true);
+        const bingxEffective = calculateEffectivePrices(bingxOrderBook, quantity, true);
+
+        // Get current WebSocket Best Bid/Ask
+        const bybitBestBid = props.bybitData?.bid || 0;
+        const bybitBestAsk = props.bybitData?.ask || 0;
+        const bingxBestBid = props.bingxData?.bid || 0;
+        const bingxBestAsk = props.bingxData?.ask || 0;
+
+        // Calculate offsets (difference between effective price and best price)
+        const bybitBidOffset = (bybitEffective.effectiveBid || bybitBestBid) - bybitBestBid;
+        const bybitAskOffset = (bybitEffective.effectiveAsk || bybitBestAsk) - bybitBestAsk;
+        const bingxBidOffset = (bingxEffective.effectiveBid || bingxBestBid) - bingxBestBid;
+        const bingxAskOffset = (bingxEffective.effectiveAsk || bingxBestAsk) - bingxBestAsk;
+
+        logger.info('Trade Tab', 'Slippage offsets calculated', {
+          bybit: {
+            bestBid: bybitBestBid,
+            effectiveBid: bybitEffective.effectiveBid,
+            bidOffset: bybitBidOffset,
+            bestAsk: bybitBestAsk,
+            effectiveAsk: bybitEffective.effectiveAsk,
+            askOffset: bybitAskOffset
+          },
+          bingx: {
+            bestBid: bingxBestBid,
+            effectiveBid: bingxEffective.effectiveBid,
+            bidOffset: bingxBidOffset,
+            bestAsk: bingxBestAsk,
+            effectiveAsk: bingxEffective.effectiveAsk,
+            askOffset: bingxAskOffset
+          }
+        });
+
+        // Update state
+        setBybitSlippageOffset({
+          bidOffset: bybitBidOffset,
+          askOffset: bybitAskOffset
+        });
+        setBingxSlippageOffset({
+          bidOffset: bingxBidOffset,
+          askOffset: bingxAskOffset
+        });
+      } catch (error) {
+        logger.error('Trade Tab', 'Failed to fetch order books', {
+          error: error instanceof Error ? error.message : String(error)
+        });
+        // On error, reset offsets to 0 (fall back to WebSocket Best prices)
+        setBybitSlippageOffset({ bidOffset: 0, askOffset: 0 });
+        setBingxSlippageOffset({ bidOffset: 0, askOffset: 0 });
+      }
+    };
+
+    // Initial fetch
+    fetchOrderBooksAndCalculateOffset();
+
+    // Poll every 5 seconds
+    const interval = setInterval(fetchOrderBooksAndCalculateOffset, 5000);
+
+    return () => clearInterval(interval);
+  }, [bybitApi, bingxApi, authState.isAuthenticated, tradeQuantity, props.bybitData, props.bingxData]);
 
   // Manual trading handlers
   const handleMarketBuy = async () => {
