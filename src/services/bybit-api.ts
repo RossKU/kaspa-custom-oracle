@@ -57,25 +57,6 @@ export class BybitAPI {
     // Bybit V5 signature format: timestamp + apiKey + recvWindow + params
     const signaturePayload = timestamp + this.config.apiKey + recvWindow + params;
 
-    logger.debug('Bybit API', 'Signature Generation - Key Info', {
-      apiKeyLength: this.config.apiKey.length,
-      apiKeyFirst8: this.config.apiKey.substring(0, 8),
-      apiKeyLast4: this.config.apiKey.substring(this.config.apiKey.length - 4),
-      secretKeyLength: this.config.apiSecret.length,
-      secretKeyFirst4: this.config.apiSecret.substring(0, 4),
-      secretKeyLast4: this.config.apiSecret.substring(this.config.apiSecret.length - 4)
-    });
-
-    logger.debug('Bybit API', 'Signature Generation - Payload', {
-      timestamp,
-      timestampLength: timestamp.length,
-      recvWindow,
-      params,
-      paramsLength: params.length,
-      signaturePayload,
-      signaturePayloadLength: signaturePayload.length
-    });
-
     // Use Web Crypto API for HMAC SHA256
     const encoder = new TextEncoder();
     const keyData = encoder.encode(this.config.apiSecret);
@@ -93,13 +74,6 @@ export class BybitAPI {
     const hashArray = Array.from(new Uint8Array(signature));
     const hashHex = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
 
-    logger.debug('Bybit API', 'Generated Signature - Full', {
-      signatureLength: hashHex.length,
-      signatureFirst16: hashHex.substring(0, 16),
-      signatureLast16: hashHex.substring(hashHex.length - 16),
-      fullSignature: hashHex
-    });
-
     return hashHex;
   }
 
@@ -113,8 +87,6 @@ export class BybitAPI {
   ): Promise<any> {
     const timestamp = Date.now().toString();
     const recvWindow = '5000';
-
-    logger.info('Bybit API', `Request ${method} ${endpoint}`, { params });
 
     let url = `${this.baseUrl}${endpoint}`;
     let body = '';
@@ -144,39 +116,15 @@ export class BybitAPI {
       headers['Content-Type'] = 'application/json';
     }
 
-    logger.debug('Bybit API', 'Request Headers - Summary', {
-      url,
-      method,
-      apiKeyPrefix: this.config.apiKey.substring(0, 8) + '...',
-      timestamp,
-      signaturePrefix: signature.substring(0, 16) + '...',
-      recvWindow
-    });
-
-    logger.debug('Bybit API', 'Request Headers - Full', {
-      'X-BAPI-API-KEY': this.config.apiKey,
-      'X-BAPI-TIMESTAMP': timestamp,
-      'X-BAPI-SIGN': signature,
-      'X-BAPI-RECV-WINDOW': recvWindow,
-      queryString,
-      body: body || '(empty)'
-    });
-
     const response = await fetch(url, {
       method,
       headers,
       body: method === 'POST' ? body : undefined
     });
 
-    logger.debug('Bybit API', 'Response Status', {
-      status: response.status,
-      statusText: response.statusText,
-      ok: response.ok
-    });
-
     if (!response.ok) {
       const errorText = await response.text();
-      logger.error('Bybit API', 'Request Failed', {
+      logger.error('Bybit API', `Request failed: ${method} ${endpoint}`, {
         status: response.status,
         statusText: response.statusText,
         errorText
@@ -185,15 +133,6 @@ export class BybitAPI {
     }
 
     const jsonResponse = await response.json();
-    logger.debug('Bybit API', 'Response Data', {
-      retCode: jsonResponse.retCode,
-      retMsg: jsonResponse.retMsg
-    });
-
-    logger.debug('Bybit API', 'Full Response Body', {
-      fullResponse: JSON.stringify(jsonResponse, null, 2)
-    });
-
     return jsonResponse;
   }
 
@@ -206,8 +145,6 @@ export class BybitAPI {
     endpoint: string,
     params: Record<string, any> = {}
   ): Promise<any> {
-    logger.info('Bybit API', `Public Request ${method} ${endpoint}`, { params });
-
     let url = `${this.baseUrl}${endpoint}`;
     const searchParams = new URLSearchParams(params);
     const queryString = searchParams.toString();
@@ -224,7 +161,7 @@ export class BybitAPI {
 
     if (!response.ok) {
       const errorText = await response.text();
-      logger.error('Bybit API', 'Public Request Failed', {
+      logger.error('Bybit API', `Public request failed: ${method} ${endpoint}`, {
         status: response.status,
         errorText
       });
@@ -232,11 +169,6 @@ export class BybitAPI {
     }
 
     const jsonResponse = await response.json();
-    logger.debug('Bybit API', 'Public Response', {
-      retCode: jsonResponse.retCode,
-      retMsg: jsonResponse.retMsg
-    });
-
     return jsonResponse;
   }
 
@@ -248,8 +180,6 @@ export class BybitAPI {
    */
   async getOrderBook(symbol: string, limit: number = 50): Promise<OrderBookResponse> {
     try {
-      logger.info('Bybit API', 'Fetching order book...', { symbol, limit });
-
       const response = await this.publicRequest('GET', '/v5/market/orderbook', {
         category: 'linear',
         symbol,
@@ -274,14 +204,6 @@ export class BybitAPI {
         price: parseFloat(entry[0]),
         quantity: parseFloat(entry[1])
       })).sort((a: OrderBookEntry, b: OrderBookEntry) => a.price - b.price); // Sort ascending by price
-
-      logger.info('Bybit API', 'Order book fetched', {
-        symbol,
-        bidsCount: bids.length,
-        asksCount: asks.length,
-        bestBid: bids[0]?.price,
-        bestAsk: asks[0]?.price
-      });
 
       return { bids, asks };
     } catch (error) {
@@ -483,29 +405,18 @@ export class BybitAPI {
    */
   async getAllPositions(): Promise<any[]> {
     try {
-      logger.info('Bybit API', 'Fetching all positions...');
-
       const response = await this.request('GET', '/v5/position/list', {
         category: 'linear',
         settleCoin: 'USDT'
       });
 
       if (response.retCode !== 0) {
-        logger.error('Bybit API', 'Failed to fetch positions', {
-          retCode: response.retCode,
-          retMsg: response.retMsg
-        });
         throw new Error(response.retMsg || 'Failed to fetch positions');
       }
 
-      const positions = response.result.list || [];
-      logger.info('Bybit API', 'Positions fetched successfully', {
-        count: positions.length
-      });
-
-      return positions;
+      return response.result.list || [];
     } catch (error) {
-      logger.error('Bybit API', 'Get all positions exception', {
+      logger.error('Bybit API', 'Failed to fetch positions', {
         error: error instanceof Error ? error.message : String(error)
       });
       throw error;
