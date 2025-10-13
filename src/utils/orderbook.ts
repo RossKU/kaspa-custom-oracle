@@ -29,6 +29,7 @@ export function calculateEffectiveAsk(
   let remainingQty = quantity;
   let totalCost = 0;
   let worstPrice = 0;
+  let levelsConsumed = 0;
 
   for (const ask of asks) {
     if (remainingQty <= 0) break;
@@ -37,15 +38,39 @@ export function calculateEffectiveAsk(
     totalCost += qtyAtThisLevel * ask.price;
     worstPrice = ask.price; // Track the worst (highest) price
     remainingQty -= qtyAtThisLevel;
+    levelsConsumed++;
   }
 
   // If we couldn't fill the entire order, return null (insufficient liquidity)
   if (remainingQty > 0) {
+    if (quantity >= 10000) {
+      console.log('[calculateEffectiveAsk] Insufficient liquidity', {
+        quantity,
+        remainingQty,
+        levelsConsumed,
+        asksCount: asks.length
+      });
+    }
     return null;
   }
 
-  // Return worst-case price (most conservative) or weighted average
-  return useWorstCase ? worstPrice : totalCost / quantity;
+  const result = useWorstCase ? worstPrice : totalCost / quantity;
+
+  // Debug log for large quantities
+  if (quantity >= 10000) {
+    console.log('[calculateEffectiveAsk] Calculation complete', {
+      quantity,
+      levelsConsumed,
+      firstAsk: asks[0],
+      lastConsumed: asks[levelsConsumed - 1],
+      worstPrice,
+      weightedAvg: totalCost / quantity,
+      useWorstCase,
+      result
+    });
+  }
+
+  return result;
 }
 
 /**
@@ -106,10 +131,30 @@ export function calculateEffectivePrices(
   bestAsk: number | null;
   effectiveAsk: number | null;
 } {
+  const bestBid = orderBook.bids[0]?.price || null;
+  const effectiveBid = calculateEffectiveBid(orderBook.bids, quantity, useWorstCase);
+  const bestAsk = orderBook.asks[0]?.price || null;
+  const effectiveAsk = calculateEffectiveAsk(orderBook.asks, quantity, useWorstCase);
+
+  // Debug log for large quantities to trace calculation
+  if (quantity >= 10000) {
+    console.log('[Order Book Calculation]', {
+      quantity,
+      asks: {
+        count: orderBook.asks.length,
+        first3: orderBook.asks.slice(0, 3),
+        last3: orderBook.asks.slice(-3),
+        bestAsk,
+        effectiveAsk,
+        offset: effectiveAsk && bestAsk ? effectiveAsk - bestAsk : null
+      }
+    });
+  }
+
   return {
-    bestBid: orderBook.bids[0]?.price || null,
-    effectiveBid: calculateEffectiveBid(orderBook.bids, quantity, useWorstCase),
-    bestAsk: orderBook.asks[0]?.price || null,
-    effectiveAsk: calculateEffectiveAsk(orderBook.asks, quantity, useWorstCase)
+    bestBid,
+    effectiveBid,
+    bestAsk,
+    effectiveAsk
   };
 }
