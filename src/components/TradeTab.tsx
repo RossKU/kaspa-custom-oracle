@@ -775,7 +775,12 @@ export function TradeTab(props: TradeTabProps) {
         <div style={{ marginBottom: '20px' }}>
           <div style={{ display: 'grid', gridTemplateColumns: '120px 80px 80px auto', gap: '10px', alignItems: 'center', marginBottom: '8px' }}>
             <label>発注量:</label>
-            <input type="number" defaultValue="100" style={{ padding: '4px', border: '1px solid #ccc' }} />
+            <input
+              type="number"
+              value={tradeQuantity}
+              onChange={(e) => setTradeQuantity(e.target.value)}
+              style={{ padding: '4px', border: '1px solid #ccc' }}
+            />
             <span>KAS</span>
             <button style={{ padding: '4px 12px', border: '1px solid #999', background: '#eee', cursor: 'pointer' }}>計算</button>
           </div>
