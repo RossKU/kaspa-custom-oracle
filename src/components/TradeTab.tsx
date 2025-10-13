@@ -730,6 +730,91 @@ export function TradeTab(props: TradeTabProps) {
     }
   };
 
+  // Manual arbitrage trade handlers
+  const handleManualTradeA = async () => {
+    // B売 A買 (BingX Sell + Bybit Buy) = A_POSITION
+    if (!bingxApi || !bybitApi) {
+      setTradeMessage('❌ Both APIs must be configured. Check API tab.');
+      return;
+    }
+
+    setIsLoading(true);
+    setTradeMessage('⏳ Executing B売 A買 (BingX Sell + Bybit Buy)...');
+
+    try {
+      logger.info('Trade Tab', 'Manual Trade A: B売 A買', {
+        bingx: { symbol: 'KAS-USDT', side: 'Sell', qty: tradeQuantity },
+        bybit: { symbol: 'KASUSDT', side: 'Buy', qty: tradeQuantity }
+      });
+
+      const [bingxResult, bybitResult] = await Promise.all([
+        bingxApi.placeOrder({
+          symbol: 'KAS-USDT',
+          side: 'Sell',
+          orderType: 'Market',
+          qty: tradeQuantity
+        }),
+        bybitApi.placeOrder({
+          symbol: 'KASUSDT',
+          side: 'Buy',
+          orderType: 'Market',
+          qty: tradeQuantity
+        })
+      ]);
+
+      setTradeMessage(`✅ B売 A買 executed!\nBingX Order: ${bingxResult.orderId}\nBybit Order: ${bybitResult.orderId}`);
+      logger.info('Trade Tab', 'Manual Trade A executed', { bingxResult, bybitResult });
+    } catch (error) {
+      const errorMsg = error instanceof Error ? error.message : String(error);
+      setTradeMessage(`❌ Failed: ${errorMsg}`);
+      logger.error('Trade Tab', 'Manual Trade A failed', { error: errorMsg });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleManualTradeB = async () => {
+    // A売 B買 (Bybit Sell + BingX Buy) = B_POSITION
+    if (!bingxApi || !bybitApi) {
+      setTradeMessage('❌ Both APIs must be configured. Check API tab.');
+      return;
+    }
+
+    setIsLoading(true);
+    setTradeMessage('⏳ Executing A売 B買 (Bybit Sell + BingX Buy)...');
+
+    try {
+      logger.info('Trade Tab', 'Manual Trade B: A売 B買', {
+        bybit: { symbol: 'KASUSDT', side: 'Sell', qty: tradeQuantity },
+        bingx: { symbol: 'KAS-USDT', side: 'Buy', qty: tradeQuantity }
+      });
+
+      const [bybitResult, bingxResult] = await Promise.all([
+        bybitApi.placeOrder({
+          symbol: 'KASUSDT',
+          side: 'Sell',
+          orderType: 'Market',
+          qty: tradeQuantity
+        }),
+        bingxApi.placeOrder({
+          symbol: 'KAS-USDT',
+          side: 'Buy',
+          orderType: 'Market',
+          qty: tradeQuantity
+        })
+      ]);
+
+      setTradeMessage(`✅ A売 B買 executed!\nBybit Order: ${bybitResult.orderId}\nBingX Order: ${bingxResult.orderId}`);
+      logger.info('Trade Tab', 'Manual Trade B executed', { bybitResult, bingxResult });
+    } catch (error) {
+      const errorMsg = error instanceof Error ? error.message : String(error);
+      setTradeMessage(`❌ Failed: ${errorMsg}`);
+      logger.error('Trade Tab', 'Manual Trade B failed', { error: errorMsg });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   // Login screen
   if (!authState.isAuthenticated) {
     return (
@@ -1018,7 +1103,20 @@ export function TradeTab(props: TradeTabProps) {
                   placeholder="ms"
                 />
               )}
-              <span style={{ fontSize: '11px', background: '#e9ecef', padding: '4px 8px', border: '1px solid #ccc' }}>S売 M買</span>
+              <button
+                onClick={handleManualTradeA}
+                disabled={isLoading || !bingxApi || !bybitApi}
+                style={{
+                  fontSize: '11px',
+                  background: (isLoading || !bingxApi || !bybitApi) ? '#e9ecef' : '#28a745',
+                  padding: '4px 8px',
+                  border: '1px solid #ccc',
+                  cursor: (isLoading || !bingxApi || !bybitApi) ? 'not-allowed' : 'pointer',
+                  color: (isLoading || !bingxApi || !bybitApi) ? '#666' : 'white'
+                }}
+              >
+                B売 A買
+              </button>
               <button style={{
                 padding: '4px 8px',
                 border: '1px solid #999',
@@ -1076,7 +1174,20 @@ export function TradeTab(props: TradeTabProps) {
                   placeholder="ms"
                 />
               )}
-              <span style={{ fontSize: '11px', background: '#e9ecef', padding: '4px 8px', border: '1px solid #ccc' }}>M売 S買</span>
+              <button
+                onClick={handleManualTradeB}
+                disabled={isLoading || !bingxApi || !bybitApi}
+                style={{
+                  fontSize: '11px',
+                  background: (isLoading || !bingxApi || !bybitApi) ? '#e9ecef' : '#28a745',
+                  padding: '4px 8px',
+                  border: '1px solid #ccc',
+                  cursor: (isLoading || !bingxApi || !bybitApi) ? 'not-allowed' : 'pointer',
+                  color: (isLoading || !bingxApi || !bybitApi) ? '#666' : 'white'
+                }}
+              >
+                A売 B買
+              </button>
               <button style={{
                 padding: '4px 8px',
                 border: '1px solid #999',
