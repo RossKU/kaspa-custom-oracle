@@ -100,6 +100,31 @@ export function TradeTab(props: TradeTabProps) {
     }
   };
 
+  // Position state detection for auto-trading
+  type PositionState = 'NONE' | 'A_POSITION' | 'B_POSITION';
+
+  const getPositionState = (): PositionState => {
+    // Check BingX positions
+    const bingxPos = positions.find((p: any) => p.symbol === 'KAS-USDT');
+    const bingxAmt = parseFloat(bingxPos?.positionAmt || bingxPos?.availableAmt || '0');
+
+    // Check Bybit positions
+    const bybitPos = bybitPositions.find((p: any) => p.symbol === 'KASUSDT');
+
+    // Determine position state
+    // A_POSITION = Bybit LONG or BingX SHORT
+    if (bybitPos?.side === 'Buy' || bingxAmt < 0) {
+      return 'A_POSITION';
+    }
+
+    // B_POSITION = Bybit SHORT or BingX LONG
+    if (bybitPos?.side === 'Sell' || bingxAmt > 0) {
+      return 'B_POSITION';
+    }
+
+    return 'NONE';
+  };
+
   // Calculate arbitrage gap (correct calculation for arbitrage trading)
   // "A買いB売り" = Buy at A (ask price) and Sell at B (bid price)
   // Gap = (B_bid - A_ask) / A_ask * 100
