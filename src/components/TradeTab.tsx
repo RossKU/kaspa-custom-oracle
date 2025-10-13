@@ -194,19 +194,6 @@ export function TradeTab(props: TradeTabProps) {
     }
   }, [triggerA, triggerB, monitorStatusA, monitorStatusB, authState.isAuthenticated]);
 
-  // Reset monitor status when trigger is disabled
-  useEffect(() => {
-    if (!triggerA.enabled && monitorStatusA.isMonitoring) {
-      setMonitorStatusA({ startTime: null, isMonitoring: false });
-    }
-  }, [triggerA.enabled, monitorStatusA.isMonitoring]);
-
-  useEffect(() => {
-    if (!triggerB.enabled && monitorStatusB.isMonitoring) {
-      setMonitorStatusB({ startTime: null, isMonitoring: false });
-    }
-  }, [triggerB.enabled, monitorStatusB.isMonitoring]);
-
   // Check session timeout
   useEffect(() => {
     if (authState.isAuthenticated && authState.lastAuthTime) {
@@ -922,7 +909,14 @@ export function TradeTab(props: TradeTabProps) {
             <span>自動リバランス</span>
           </label>
           <label style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-            <input type="checkbox" />
+            <input
+              type="checkbox"
+              checked={triggerA.enabled && triggerB.enabled}
+              onChange={(e) => {
+                setTriggerA({ ...triggerA, enabled: e.target.checked });
+                setTriggerB({ ...triggerB, enabled: e.target.checked });
+              }}
+            />
             <span>自動実行</span>
           </label>
           <label style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
@@ -1007,11 +1001,15 @@ export function TradeTab(props: TradeTabProps) {
                   placeholder="ms"
                 />
               )}
-              <span style={{ fontSize: '11px', background: '#e9ecef', padding: '4px 8px', border: '1px solid #ccc' }}>S左M両</span>
-              <button
-                onClick={() => setTriggerA({ ...triggerA, enabled: !triggerA.enabled })}
-                style={{ padding: '4px 8px', border: '1px solid #999', background: '#d4edda', cursor: 'pointer', fontSize: '11px' }}
-              >
+              <button style={{ padding: '4px 8px', border: '1px solid #999', background: '#d4edda', cursor: 'pointer', fontSize: '11px' }}>S売 M買</button>
+              <button style={{
+                padding: '4px 8px',
+                border: '1px solid #999',
+                background: triggerA.enabled ? '#dc3545' : '#e9ecef',
+                color: triggerA.enabled ? 'white' : '#666',
+                cursor: 'default',
+                fontSize: '11px'
+              }}>
                 自動
               </button>
             </div>
@@ -1061,11 +1059,15 @@ export function TradeTab(props: TradeTabProps) {
                   placeholder="ms"
                 />
               )}
-              <span style={{ fontSize: '11px', background: '#e9ecef', padding: '4px 8px', border: '1px solid #ccc' }}>M右S両</span>
-              <button
-                onClick={() => setTriggerB({ ...triggerB, enabled: !triggerB.enabled })}
-                style={{ padding: '4px 8px', border: '1px solid #999', background: '#d4edda', cursor: 'pointer', fontSize: '11px' }}
-              >
+              <button style={{ padding: '4px 8px', border: '1px solid #999', background: '#d4edda', cursor: 'pointer', fontSize: '11px' }}>M売 S買</button>
+              <button style={{
+                padding: '4px 8px',
+                border: '1px solid #999',
+                background: triggerB.enabled ? '#dc3545' : '#e9ecef',
+                color: triggerB.enabled ? 'white' : '#666',
+                cursor: 'default',
+                fontSize: '11px'
+              }}>
                 自動
               </button>
             </div>
