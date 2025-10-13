@@ -91,6 +91,9 @@ export function TradeTab(props: TradeTabProps) {
     isMonitoring: false
   });
 
+  // Debug logs state for in-tab monitoring
+  const [debugLogs, setDebugLogs] = useState<string[]>([]);
+
   // Get Bid/Ask prices from exchange name
   // For Bybit and BingX: adds slippage offset calculated from Order Book depth
   const getExchangeData = (exchange: string): { bid: number; ask: number } | null => {
@@ -641,6 +644,19 @@ export function TradeTab(props: TradeTabProps) {
 
     return () => clearInterval(interval);
   }, [bybitApi, bingxApi, authState.isAuthenticated, tradeQuantity]);
+
+  // Subscribe to debug logs for in-tab monitoring
+  useEffect(() => {
+    const unsubscribe = logger.subscribe((logs) => {
+      const formatted = logs.slice(-50).map(log => {
+        const dataStr = log.data ? ` | ${JSON.stringify(log.data)}` : '';
+        return `[${log.timestamp.split('T')[1].split('.')[0]}] [${log.level.toUpperCase()}] [${log.source}] ${log.message}${dataStr}`;
+      });
+      setDebugLogs(formatted);
+    });
+
+    return () => unsubscribe();
+  }, []);
 
   // Manual trading handlers
   const handleMarketBuy = async () => {
@@ -1839,6 +1855,71 @@ export function TradeTab(props: TradeTabProps) {
       <p style={{ marginTop: '15px', color: '#666', fontSize: '12px', textAlign: 'center' }}>
         Session active. Auto-logout in {Math.round((SESSION_TIMEOUT - (Date.now() - authState.lastAuthTime!)) / 60000)} minutes.
       </p>
+
+      {/* Debug Logs Section */}
+      <div style={{
+        marginTop: '30px',
+        border: '2px solid #6c757d',
+        borderRadius: '8px',
+        padding: '20px',
+        backgroundColor: '#f8f9fa'
+      }}>
+        <div style={{
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          marginBottom: '15px'
+        }}>
+          <h3 style={{ margin: 0, color: '#6c757d' }}>
+            🐛 Debug Logs ({debugLogs.length})
+          </h3>
+          <button
+            onClick={() => logger.downloadLogs()}
+            style={{
+              padding: '8px 16px',
+              fontSize: '14px',
+              fontWeight: 'bold',
+              backgroundColor: '#6c757d',
+              color: 'white',
+              border: 'none',
+              borderRadius: '4px',
+              cursor: 'pointer'
+            }}
+          >
+            📥 Download Logs
+          </button>
+        </div>
+        <div style={{
+          height: '300px',
+          overflow: 'auto',
+          border: '1px solid #ccc',
+          borderRadius: '4px',
+          padding: '10px',
+          backgroundColor: '#f5f5f5',
+          fontFamily: 'monospace',
+          fontSize: '12px',
+          lineHeight: '1.5'
+        }}>
+          {debugLogs.length === 0 ? (
+            <div style={{ color: '#999', textAlign: 'center', paddingTop: '130px' }}>
+              No logs yet...
+            </div>
+          ) : (
+            debugLogs.map((log, idx) => (
+              <div
+                key={idx}
+                style={{
+                  padding: '2px 0',
+                  borderBottom: idx < debugLogs.length - 1 ? '1px solid #eee' : 'none',
+                  color: log.includes('[ERROR]') ? '#dc3545' : log.includes('[WARN]') ? '#ffc107' : log.includes('[DEBUG]') ? '#6c757d' : '#000'
+                }}
+              >
+                {log}
+              </div>
+            ))
+          )}
+        </div>
+      </div>
     </section>
   );
 }
