@@ -194,6 +194,162 @@ export function TradeTab(props: TradeTabProps) {
     }
   }, [triggerA, triggerB, monitorStatusA, monitorStatusB, authState.isAuthenticated]);
 
+  // Phase 4: 100ms monitoring logic for auto-trading
+  useEffect(() => {
+    if (!authState.isAuthenticated) return;
+    if (!monitorStatusA.isMonitoring && !monitorStatusB.isMonitoring) return;
+
+    logger.info('Trade Tab', '100ms monitoring started');
+
+    const monitorInterval = setInterval(() => {
+      const gapA = parseFloat(gapABuyBSell);
+      const gapB = parseFloat(gapBBuyASell);
+      const posState = getPositionState();
+      const now = Date.now();
+
+      // A direction monitoring (A買いB売り)
+      if (monitorStatusA.isMonitoring && posState !== 'A_POSITION') {
+        logger.debug('Trade Tab', 'Monitor A tick', {
+          gapA,
+          threshold: triggerA.inThreshold,
+          positionState: posState,
+          startTime: monitorStatusA.startTime,
+          isAboveThreshold: gapA >= triggerA.inThreshold
+        });
+
+        if (gapA >= triggerA.inThreshold) {
+          // Above threshold - start or continue monitoring
+          if (monitorStatusA.startTime === null) {
+            logger.info('Trade Tab', 'Monitor A: Gap above threshold, starting timer', {
+              gapA,
+              threshold: triggerA.inThreshold
+            });
+            setMonitorStatusA({ startTime: now, isMonitoring: true });
+          } else {
+            const elapsed = now - monitorStatusA.startTime;
+            logger.debug('Trade Tab', 'Monitor A: Tracking duration', {
+              elapsed,
+              required: triggerA.duration,
+              gapA
+            });
+
+            if (elapsed >= triggerA.duration) {
+              logger.info('Trade Tab', 'Monitor A: Threshold held for required duration!', {
+                elapsed,
+                duration: triggerA.duration,
+                gapA,
+                autoEnabled: triggerA.enabled
+              });
+
+              if (triggerA.enabled) {
+                logger.info('Trade Tab', 'Monitor A: AUTO-EXECUTION triggered', {
+                  gapA,
+                  duration: elapsed
+                });
+                // TODO: Execute trade A (Phase 5)
+              } else {
+                logger.info('Trade Tab', 'Monitor A: Manual confirmation required', {
+                  gapA,
+                  duration: elapsed
+                });
+                // TODO: Show confirmation dialog (Phase 5)
+              }
+
+              // Reset monitor after trigger
+              setMonitorStatusA({ startTime: null, isMonitoring: false });
+            }
+          }
+        } else {
+          // Below threshold - reset timer
+          if (monitorStatusA.startTime !== null) {
+            logger.info('Trade Tab', 'Monitor A: Gap dropped below threshold, resetting timer', {
+              gapA,
+              threshold: triggerA.inThreshold
+            });
+            setMonitorStatusA({ startTime: null, isMonitoring: true });
+          }
+        }
+      }
+
+      // B direction monitoring (B買いA売り)
+      if (monitorStatusB.isMonitoring && posState !== 'B_POSITION') {
+        logger.debug('Trade Tab', 'Monitor B tick', {
+          gapB,
+          threshold: triggerB.inThreshold,
+          positionState: posState,
+          startTime: monitorStatusB.startTime,
+          isAboveThreshold: gapB >= triggerB.inThreshold
+        });
+
+        if (gapB >= triggerB.inThreshold) {
+          if (monitorStatusB.startTime === null) {
+            logger.info('Trade Tab', 'Monitor B: Gap above threshold, starting timer', {
+              gapB,
+              threshold: triggerB.inThreshold
+            });
+            setMonitorStatusB({ startTime: now, isMonitoring: true });
+          } else {
+            const elapsed = now - monitorStatusB.startTime;
+            logger.debug('Trade Tab', 'Monitor B: Tracking duration', {
+              elapsed,
+              required: triggerB.duration,
+              gapB
+            });
+
+            if (elapsed >= triggerB.duration) {
+              logger.info('Trade Tab', 'Monitor B: Threshold held for required duration!', {
+                elapsed,
+                duration: triggerB.duration,
+                gapB,
+                autoEnabled: triggerB.enabled
+              });
+
+              if (triggerB.enabled) {
+                logger.info('Trade Tab', 'Monitor B: AUTO-EXECUTION triggered', {
+                  gapB,
+                  duration: elapsed
+                });
+                // TODO: Execute trade B (Phase 5)
+              } else {
+                logger.info('Trade Tab', 'Monitor B: Manual confirmation required', {
+                  gapB,
+                  duration: elapsed
+                });
+                // TODO: Show confirmation dialog (Phase 5)
+              }
+
+              setMonitorStatusB({ startTime: null, isMonitoring: false });
+            }
+          }
+        } else {
+          if (monitorStatusB.startTime !== null) {
+            logger.info('Trade Tab', 'Monitor B: Gap dropped below threshold, resetting timer', {
+              gapB,
+              threshold: triggerB.inThreshold
+            });
+            setMonitorStatusB({ startTime: null, isMonitoring: true });
+          }
+        }
+      }
+    }, 100); // 100ms polling
+
+    return () => {
+      logger.info('Trade Tab', '100ms monitoring stopped');
+      clearInterval(monitorInterval);
+    };
+  }, [
+    authState.isAuthenticated,
+    monitorStatusA.isMonitoring,
+    monitorStatusB.isMonitoring,
+    monitorStatusA.startTime,
+    monitorStatusB.startTime,
+    gapABuyBSell,
+    gapBBuyASell,
+    triggerA,
+    triggerB,
+    positionState
+  ]);
+
   // Check session timeout
   useEffect(() => {
     if (authState.isAuthenticated && authState.lastAuthTime) {
