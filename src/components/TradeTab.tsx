@@ -461,7 +461,7 @@ export function TradeTab(props: TradeTabProps) {
     const interval = setInterval(fetchOrderBooksAndCalculateOffset, 5000);
 
     return () => clearInterval(interval);
-  }, [bybitApi, bingxApi, authState.isAuthenticated, tradeQuantity, props.bybitData, props.bingxData]);
+  }, [bybitApi, bingxApi, authState.isAuthenticated, tradeQuantity]);
 
   // Manual trading handlers
   const handleMarketBuy = async () => {
