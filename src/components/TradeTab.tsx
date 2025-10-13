@@ -21,6 +21,9 @@ interface TradeTabProps {
   bingxData: BingXPriceData | null;
 }
 
+// Polling mode for adaptive API request management
+type PollingMode = 'IDLE' | 'MONITORING' | 'TRADING';
+
 export function TradeTab(props: TradeTabProps) {
   const [authState, setAuthState] = useState<TradeAuthState>({
     isAuthenticated: false,
@@ -93,6 +96,12 @@ export function TradeTab(props: TradeTabProps) {
 
   // Debug logs state for in-tab monitoring
   const [debugLogs, setDebugLogs] = useState<string[]>([]);
+
+  // Polling mode state for adaptive CORS proxy load management
+  // IDLE: Position polling only (startup)
+  // MONITORING: Order book polling only (Gap calculation)
+  // TRADING: Position polling only (after trade execution)
+  const [pollingMode, setPollingMode] = useState<PollingMode>('IDLE');
 
   // Get Bid/Ask prices from exchange name
   // For Bybit and BingX: adds slippage offset calculated from Order Book depth
@@ -196,6 +205,21 @@ export function TradeTab(props: TradeTabProps) {
       });
     }
   }, [triggerA, triggerB, monitorStatusA, monitorStatusB, authState.isAuthenticated]);
+
+  // Adaptive polling mode management (CORS proxy load reduction)
+  useEffect(() => {
+    if (!authState.isAuthenticated) return;
+
+    const isMonitoring = monitorStatusA.isMonitoring || monitorStatusB.isMonitoring;
+
+    if (isMonitoring && pollingMode !== 'MONITORING') {
+      setPollingMode('MONITORING');
+      logger.info('Trade Tab', 'Polling mode: MONITORING (Order book polling only)');
+    } else if (!isMonitoring && pollingMode === 'MONITORING') {
+      setPollingMode('IDLE');
+      logger.info('Trade Tab', 'Polling mode: IDLE (Position polling only)');
+    }
+  }, [monitorStatusA.isMonitoring, monitorStatusB.isMonitoring, pollingMode, authState.isAuthenticated]);
 
   // Phase 4: 100ms monitoring logic for auto-trading
   useEffect(() => {
@@ -538,12 +562,19 @@ export function TradeTab(props: TradeTabProps) {
   }, [authState.isAuthenticated]);
 
   // Fetch BingX positions periodically
+  // Only runs in IDLE and TRADING modes (adaptive polling)
   useEffect(() => {
     if (!bingxApi || !authState.isAuthenticated) {
       logger.info('Trade Tab', 'Position fetcher not starting', {
         hasBingxApi: !!bingxApi,
         isAuthenticated: authState.isAuthenticated
       });
+      return;
+    }
+
+    // MONITORING mode: Skip position polling (order book polling only)
+    if (pollingMode === 'MONITORING') {
+      logger.info('Trade Tab', 'Position fetcher paused (MONITORING mode)');
       return;
     }
 
@@ -582,12 +613,19 @@ export function TradeTab(props: TradeTabProps) {
       logger.info('Trade Tab', 'Stopping position fetcher');
       clearInterval(interval);
     };
-  }, [bingxApi, bybitApi, authState.isAuthenticated]);
+  }, [bingxApi, bybitApi, authState.isAuthenticated, pollingMode]);
 
   // Fetch Order Book depth and calculate slippage offset (every 5 seconds)
   // This calculates the difference between WebSocket Best Bid/Ask and Order Book Effective prices
+  // Only runs in MONITORING mode (adaptive polling)
   useEffect(() => {
     if (!bybitApi || !bingxApi || !authState.isAuthenticated) {
+      return;
+    }
+
+    // IDLE/TRADING modes: Skip order book polling (position polling only)
+    if (pollingMode !== 'MONITORING') {
+      logger.info('Trade Tab', 'Order book fetcher paused (not in MONITORING mode)');
       return;
     }
 
@@ -643,7 +681,7 @@ export function TradeTab(props: TradeTabProps) {
     const interval = setInterval(fetchOrderBooksAndCalculateOffset, 5000);
 
     return () => clearInterval(interval);
-  }, [bybitApi, bingxApi, authState.isAuthenticated, tradeQuantity]);
+  }, [bybitApi, bingxApi, authState.isAuthenticated, tradeQuantity, pollingMode]);
 
   // Subscribe to debug logs for in-tab monitoring
   useEffect(() => {
@@ -881,6 +919,10 @@ export function TradeTab(props: TradeTabProps) {
     setIsLoading(true);
     setTradeMessage('⏳ Executing B売 A買 (BingX Sell + Bybit Buy)...');
 
+    // Switch to TRADING mode (position polling only)
+    setPollingMode('TRADING');
+    logger.info('Trade Tab', 'Polling mode: TRADING (Position polling only)');
+
     try {
       logger.info('Trade Tab', 'Manual Trade A: B売 A買', {
         bingx: { symbol: 'KAS-USDT', side: 'Sell', qty: tradeQuantity },
@@ -904,10 +946,18 @@ export function TradeTab(props: TradeTabProps) {
 
       setTradeMessage(`✅ B売 A買 executed!\nBingX Order: ${bingxResult.orderId}\nBybit Order: ${bybitResult.orderId}`);
       logger.info('Trade Tab', 'Manual Trade A executed', { bingxResult, bybitResult });
+
+      // Return to IDLE mode after 5 seconds (position confirmed)
+      setTimeout(() => {
+        setPollingMode('IDLE');
+        logger.info('Trade Tab', 'Polling mode: IDLE (Position polling only)');
+      }, 5000);
     } catch (error) {
       const errorMsg = error instanceof Error ? error.message : String(error);
       setTradeMessage(`❌ Failed: ${errorMsg}`);
       logger.error('Trade Tab', 'Manual Trade A failed', { error: errorMsg });
+      // Return to IDLE immediately on error
+      setPollingMode('IDLE');
     } finally {
       setIsLoading(false);
     }
@@ -922,6 +972,10 @@ export function TradeTab(props: TradeTabProps) {
 
     setIsLoading(true);
     setTradeMessage('⏳ Executing A売 B買 (Bybit Sell + BingX Buy)...');
+
+    // Switch to TRADING mode (position polling only)
+    setPollingMode('TRADING');
+    logger.info('Trade Tab', 'Polling mode: TRADING (Position polling only)');
 
     try {
       logger.info('Trade Tab', 'Manual Trade B: A売 B買', {
@@ -946,10 +1000,18 @@ export function TradeTab(props: TradeTabProps) {
 
       setTradeMessage(`✅ A売 B買 executed!\nBybit Order: ${bybitResult.orderId}\nBingX Order: ${bingxResult.orderId}`);
       logger.info('Trade Tab', 'Manual Trade B executed', { bybitResult, bingxResult });
+
+      // Return to IDLE mode after 5 seconds (position confirmed)
+      setTimeout(() => {
+        setPollingMode('IDLE');
+        logger.info('Trade Tab', 'Polling mode: IDLE (Position polling only)');
+      }, 5000);
     } catch (error) {
       const errorMsg = error instanceof Error ? error.message : String(error);
       setTradeMessage(`❌ Failed: ${errorMsg}`);
       logger.error('Trade Tab', 'Manual Trade B failed', { error: errorMsg });
+      // Return to IDLE immediately on error
+      setPollingMode('IDLE');
     } finally {
       setIsLoading(false);
     }
