@@ -4,19 +4,13 @@ interface Settings {
   autoRefresh: boolean;
   showArbitrageAlerts: boolean;
   soundNotifications: boolean;
-  minSpread: number;
-  maxPosition: number;
-  autoTrade: boolean;
 }
 
 export function SettingsTab() {
   const [settings, setSettings] = useState<Settings>({
     autoRefresh: true,
     showArbitrageAlerts: true,
-    soundNotifications: false,
-    minSpread: 2.0,
-    maxPosition: 1000,
-    autoTrade: false
+    soundNotifications: false
   });
 
   // Load from localStorage
@@ -41,10 +35,7 @@ export function SettingsTab() {
       const defaults: Settings = {
         autoRefresh: true,
         showArbitrageAlerts: true,
-        soundNotifications: false,
-        minSpread: 2.0,
-        maxPosition: 1000,
-        autoTrade: false
+        soundNotifications: false
       };
       setSettings(defaults);
       localStorage.setItem('appSettings', JSON.stringify(defaults));
@@ -86,45 +77,6 @@ export function SettingsTab() {
             />
             Sound notifications
           </label>
-        </div>
-      </div>
-
-      <div className="settings-group">
-        <h3>Trading</h3>
-        <div className="form-group">
-          <label>Minimum Spread (%):</label>
-          <input
-            type="number"
-            step="0.1"
-            min="0"
-            max="10"
-            value={settings.minSpread}
-            onChange={(e) => setSettings({ ...settings, minSpread: parseFloat(e.target.value) })}
-          />
-          <small>Only show opportunities with spread above this threshold</small>
-        </div>
-        <div className="form-group">
-          <label>Maximum Position (KAS):</label>
-          <input
-            type="number"
-            step="100"
-            min="0"
-            value={settings.maxPosition}
-            onChange={(e) => setSettings({ ...settings, maxPosition: parseInt(e.target.value) })}
-          />
-          <small>Maximum position size per trade</small>
-        </div>
-        <div className="form-group checkbox-group">
-          <label>
-            <input
-              type="checkbox"
-              checked={settings.autoTrade}
-              onChange={(e) => setSettings({ ...settings, autoTrade: e.target.checked })}
-              disabled
-            />
-            Auto-trade (Coming Soon)
-          </label>
-          <small>⚠️ Automatically execute trades when spread opportunities detected</small>
         </div>
       </div>
 
