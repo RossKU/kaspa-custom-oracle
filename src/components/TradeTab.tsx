@@ -1001,7 +1001,22 @@ export function TradeTab(props: TradeTabProps) {
                   placeholder="ms"
                 />
               )}
-              <button style={{ padding: '4px 8px', border: '1px solid #999', background: '#d4edda', cursor: 'pointer', fontSize: '11px' }}>S売 M買</button>
+              <button
+                onClick={() => setMonitorStatusA({
+                  startTime: monitorStatusA.isMonitoring ? null : Date.now(),
+                  isMonitoring: !monitorStatusA.isMonitoring
+                })}
+                style={{
+                  padding: '4px 8px',
+                  border: '1px solid #999',
+                  background: monitorStatusA.isMonitoring ? '#dc3545' : '#d4edda',
+                  color: monitorStatusA.isMonitoring ? 'white' : '#000',
+                  cursor: 'pointer',
+                  fontSize: '11px'
+                }}
+              >
+                S売 M買
+              </button>
               <button style={{
                 padding: '4px 8px',
                 border: '1px solid #999',
@@ -1059,7 +1074,22 @@ export function TradeTab(props: TradeTabProps) {
                   placeholder="ms"
                 />
               )}
-              <button style={{ padding: '4px 8px', border: '1px solid #999', background: '#d4edda', cursor: 'pointer', fontSize: '11px' }}>M売 S買</button>
+              <button
+                onClick={() => setMonitorStatusB({
+                  startTime: monitorStatusB.isMonitoring ? null : Date.now(),
+                  isMonitoring: !monitorStatusB.isMonitoring
+                })}
+                style={{
+                  padding: '4px 8px',
+                  border: '1px solid #999',
+                  background: monitorStatusB.isMonitoring ? '#dc3545' : '#d4edda',
+                  color: monitorStatusB.isMonitoring ? 'white' : '#000',
+                  cursor: 'pointer',
+                  fontSize: '11px'
+                }}
+              >
+                M売 S買
+              </button>
               <button style={{
                 padding: '4px 8px',
                 border: '1px solid #999',
