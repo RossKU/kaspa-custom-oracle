@@ -182,6 +182,18 @@ export function TradeTab(props: TradeTabProps) {
     }
   }, [positionState, authState.isAuthenticated]);
 
+  // Log trigger state changes (debug only)
+  useEffect(() => {
+    if (authState.isAuthenticated) {
+      logger.debug('Trade Tab', 'Trigger state updated', {
+        triggerA,
+        triggerB,
+        monitorStatusA,
+        monitorStatusB
+      });
+    }
+  }, [triggerA, triggerB, monitorStatusA, monitorStatusB, authState.isAuthenticated]);
+
   // Check session timeout
   useEffect(() => {
     if (authState.isAuthenticated && authState.lastAuthTime) {
