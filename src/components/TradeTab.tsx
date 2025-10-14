@@ -921,47 +921,55 @@ export function TradeTab(props: TradeTabProps) {
 
     try {
       const currentPositionState = getPositionState();
-
-      // Determine order direction based on position state
-      let bingxSide: 'Buy' | 'Sell';
-      let bybitSide: 'Buy' | 'Sell';
       let actionType: string;
+      let bingxResult: any;
+      let bybitResult: any;
 
       if (currentPositionState === 'B_POSITION') {
-        // Close B_POSITION: Bybit SHORT → Buy, BingX LONG → Sell
-        bingxSide = 'Sell';
-        bybitSide = 'Buy';
+        // Close B_POSITION: Use closePosition() API
+        // B_POSITION = Bybit SHORT + BingX LONG
         actionType = 'Closing B_POSITION';
-        setTradeMessage('⏳ Closing B_POSITION (Bybit Buy + BingX Sell)...');
+        setTradeMessage('⏳ Closing B_POSITION (using closePosition API)...');
+
+        logger.info('Trade Tab', 'Manual Trade A: Closing B_POSITION', {
+          currentPositionState,
+          actionType,
+          bingx: { symbol: 'KAS-USDT', positionSide: 'LONG', qty: tradeQuantity },
+          bybit: { symbol: 'KASUSDT', side: 'Sell', qty: tradeQuantity }
+        });
+
+        [bingxResult, bybitResult] = await Promise.all([
+          bingxApi.closePosition('KAS-USDT', 'LONG', tradeQuantity),
+          bybitApi.closePosition('KASUSDT', 'Sell', tradeQuantity)
+        ]);
       } else {
-        // Open/Increase A_POSITION: Bybit LONG, BingX SHORT
-        bingxSide = 'Sell';
-        bybitSide = 'Buy';
+        // Open/Increase A_POSITION: Use placeOrder() API
+        // A_POSITION = Bybit LONG + BingX SHORT
         actionType = currentPositionState === 'A_POSITION' ? 'Increasing A_POSITION' : 'Opening A_POSITION';
         setTradeMessage('⏳ Executing Trade A (Bybit Buy + BingX Sell)...');
+
+        logger.info('Trade Tab', 'Manual Trade A: B売 A買', {
+          currentPositionState,
+          actionType,
+          bingx: { symbol: 'KAS-USDT', side: 'Sell', qty: tradeQuantity },
+          bybit: { symbol: 'KASUSDT', side: 'Buy', qty: tradeQuantity }
+        });
+
+        [bingxResult, bybitResult] = await Promise.all([
+          bingxApi.placeOrder({
+            symbol: 'KAS-USDT',
+            side: 'Sell',
+            orderType: 'Market',
+            qty: tradeQuantity
+          }),
+          bybitApi.placeOrder({
+            symbol: 'KASUSDT',
+            side: 'Buy',
+            orderType: 'Market',
+            qty: tradeQuantity
+          })
+        ]);
       }
-
-      logger.info('Trade Tab', 'Manual Trade A: B売 A買', {
-        currentPositionState,
-        actionType,
-        bingx: { symbol: 'KAS-USDT', side: bingxSide, qty: tradeQuantity },
-        bybit: { symbol: 'KASUSDT', side: bybitSide, qty: tradeQuantity }
-      });
-
-      const [bingxResult, bybitResult] = await Promise.all([
-        bingxApi.placeOrder({
-          symbol: 'KAS-USDT',
-          side: bingxSide,
-          orderType: 'Market',
-          qty: tradeQuantity
-        }),
-        bybitApi.placeOrder({
-          symbol: 'KASUSDT',
-          side: bybitSide,
-          orderType: 'Market',
-          qty: tradeQuantity
-        })
-      ]);
 
       setTradeMessage(`✅ Trade A executed (${actionType})!\nBingX Order: ${bingxResult.orderId}\nBybit Order: ${bybitResult.orderId}`);
       logger.info('Trade Tab', 'Manual Trade A executed', { actionType, currentPositionState, bingxResult, bybitResult });
@@ -997,47 +1005,55 @@ export function TradeTab(props: TradeTabProps) {
 
     try {
       const currentPositionState = getPositionState();
-
-      // Determine order direction based on position state
-      let bingxSide: 'Buy' | 'Sell';
-      let bybitSide: 'Buy' | 'Sell';
       let actionType: string;
+      let bingxResult: any;
+      let bybitResult: any;
 
       if (currentPositionState === 'A_POSITION') {
-        // Close A_POSITION: Bybit LONG → Sell, BingX SHORT → Buy
-        bingxSide = 'Buy';
-        bybitSide = 'Sell';
+        // Close A_POSITION: Use closePosition() API
+        // A_POSITION = Bybit LONG + BingX SHORT
         actionType = 'Closing A_POSITION';
-        setTradeMessage('⏳ Closing A_POSITION (Bybit Sell + BingX Buy)...');
+        setTradeMessage('⏳ Closing A_POSITION (using closePosition API)...');
+
+        logger.info('Trade Tab', 'Manual Trade B: Closing A_POSITION', {
+          currentPositionState,
+          actionType,
+          bybit: { symbol: 'KASUSDT', side: 'Buy', qty: tradeQuantity },
+          bingx: { symbol: 'KAS-USDT', positionSide: 'SHORT', qty: tradeQuantity }
+        });
+
+        [bybitResult, bingxResult] = await Promise.all([
+          bybitApi.closePosition('KASUSDT', 'Buy', tradeQuantity),
+          bingxApi.closePosition('KAS-USDT', 'SHORT', tradeQuantity)
+        ]);
       } else {
-        // Open/Increase B_POSITION: Bybit SHORT, BingX LONG
-        bingxSide = 'Buy';
-        bybitSide = 'Sell';
+        // Open/Increase B_POSITION: Use placeOrder() API
+        // B_POSITION = Bybit SHORT + BingX LONG
         actionType = currentPositionState === 'B_POSITION' ? 'Increasing B_POSITION' : 'Opening B_POSITION';
         setTradeMessage('⏳ Executing Trade B (Bybit Sell + BingX Buy)...');
+
+        logger.info('Trade Tab', 'Manual Trade B: A売 B買', {
+          currentPositionState,
+          actionType,
+          bybit: { symbol: 'KASUSDT', side: 'Sell', qty: tradeQuantity },
+          bingx: { symbol: 'KAS-USDT', side: 'Buy', qty: tradeQuantity }
+        });
+
+        [bybitResult, bingxResult] = await Promise.all([
+          bybitApi.placeOrder({
+            symbol: 'KASUSDT',
+            side: 'Sell',
+            orderType: 'Market',
+            qty: tradeQuantity
+          }),
+          bingxApi.placeOrder({
+            symbol: 'KAS-USDT',
+            side: 'Buy',
+            orderType: 'Market',
+            qty: tradeQuantity
+          })
+        ]);
       }
-
-      logger.info('Trade Tab', 'Manual Trade B: A売 B買', {
-        currentPositionState,
-        actionType,
-        bybit: { symbol: 'KASUSDT', side: bybitSide, qty: tradeQuantity },
-        bingx: { symbol: 'KAS-USDT', side: bingxSide, qty: tradeQuantity }
-      });
-
-      const [bybitResult, bingxResult] = await Promise.all([
-        bybitApi.placeOrder({
-          symbol: 'KASUSDT',
-          side: bybitSide,
-          orderType: 'Market',
-          qty: tradeQuantity
-        }),
-        bingxApi.placeOrder({
-          symbol: 'KAS-USDT',
-          side: bingxSide,
-          orderType: 'Market',
-          qty: tradeQuantity
-        })
-      ]);
 
       setTradeMessage(`✅ Trade B executed (${actionType})!\nBybit Order: ${bybitResult.orderId}\nBingX Order: ${bingxResult.orderId}`);
       logger.info('Trade Tab', 'Manual Trade B executed', { actionType, currentPositionState, bybitResult, bingxResult });
