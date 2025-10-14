@@ -907,42 +907,64 @@ export function TradeTab(props: TradeTabProps) {
 
   // Manual arbitrage trade handlers
   const handleManualTradeA = async () => {
-    // B売 A買 (BingX Sell + Bybit Buy) = A_POSITION
+    // Trade A: "B売 A買" (BingX Sell + Bybit Buy)
+    // When NONE or A_POSITION: Open/Increase A_POSITION (Bybit LONG + BingX SHORT)
+    // When B_POSITION: Close B_POSITION (reverse direction)
     if (!bingxApi || !bybitApi) {
       setTradeMessage('❌ Both APIs must be configured. Check API tab.');
       return;
     }
 
     setIsLoading(true);
-    setTradeMessage('⏳ Executing B売 A買 (BingX Sell + Bybit Buy)...');
-
-    // Switch to TRADING mode (position polling only)
     setPollingMode('TRADING');
     logger.info('Trade Tab', 'Polling mode: TRADING (Position polling only)');
 
     try {
+      const currentPositionState = getPositionState();
+
+      // Determine order direction based on position state
+      let bingxSide: 'Buy' | 'Sell';
+      let bybitSide: 'Buy' | 'Sell';
+      let actionType: string;
+
+      if (currentPositionState === 'B_POSITION') {
+        // Close B_POSITION: Bybit SHORT → Buy, BingX LONG → Sell
+        bingxSide = 'Sell';
+        bybitSide = 'Buy';
+        actionType = 'Closing B_POSITION';
+        setTradeMessage('⏳ Closing B_POSITION (Bybit Buy + BingX Sell)...');
+      } else {
+        // Open/Increase A_POSITION: Bybit LONG, BingX SHORT
+        bingxSide = 'Sell';
+        bybitSide = 'Buy';
+        actionType = currentPositionState === 'A_POSITION' ? 'Increasing A_POSITION' : 'Opening A_POSITION';
+        setTradeMessage('⏳ Executing Trade A (Bybit Buy + BingX Sell)...');
+      }
+
       logger.info('Trade Tab', 'Manual Trade A: B売 A買', {
-        bingx: { symbol: 'KAS-USDT', side: 'Sell', qty: tradeQuantity },
-        bybit: { symbol: 'KASUSDT', side: 'Buy', qty: tradeQuantity }
+        currentPositionState,
+        actionType,
+        bingx: { symbol: 'KAS-USDT', side: bingxSide, qty: tradeQuantity },
+        bybit: { symbol: 'KASUSDT', side: bybitSide, qty: tradeQuantity }
       });
 
       const [bingxResult, bybitResult] = await Promise.all([
         bingxApi.placeOrder({
           symbol: 'KAS-USDT',
-          side: 'Sell',
+          side: bingxSide,
           orderType: 'Market',
           qty: tradeQuantity
         }),
         bybitApi.placeOrder({
           symbol: 'KASUSDT',
-          side: 'Buy',
+          side: bybitSide,
           orderType: 'Market',
           qty: tradeQuantity
         })
       ]);
 
-      setTradeMessage(`✅ B売 A買 executed!\nBingX Order: ${bingxResult.orderId}\nBybit Order: ${bybitResult.orderId}`);
-      logger.info('Trade Tab', 'Manual Trade A executed', { bingxResult, bybitResult });
+      setTradeMessage(`✅ Trade A executed (${actionType})!\nBingX Order: ${bingxResult.orderId}\nBybit Order: ${bybitResult.orderId}`);
+      logger.info('Trade Tab', 'Manual Trade A executed', { actionType, currentPositionState, bingxResult, bybitResult });
 
       // Return to IDLE mode after 5 seconds (position confirmed)
       setTimeout(() => {
@@ -961,42 +983,64 @@ export function TradeTab(props: TradeTabProps) {
   };
 
   const handleManualTradeB = async () => {
-    // A売 B買 (Bybit Sell + BingX Buy) = B_POSITION
+    // Trade B: "A売 B買" (Bybit Sell + BingX Buy)
+    // When NONE or B_POSITION: Open/Increase B_POSITION (Bybit SHORT + BingX LONG)
+    // When A_POSITION: Close A_POSITION (reverse direction)
     if (!bingxApi || !bybitApi) {
       setTradeMessage('❌ Both APIs must be configured. Check API tab.');
       return;
     }
 
     setIsLoading(true);
-    setTradeMessage('⏳ Executing A売 B買 (Bybit Sell + BingX Buy)...');
-
-    // Switch to TRADING mode (position polling only)
     setPollingMode('TRADING');
     logger.info('Trade Tab', 'Polling mode: TRADING (Position polling only)');
 
     try {
+      const currentPositionState = getPositionState();
+
+      // Determine order direction based on position state
+      let bingxSide: 'Buy' | 'Sell';
+      let bybitSide: 'Buy' | 'Sell';
+      let actionType: string;
+
+      if (currentPositionState === 'A_POSITION') {
+        // Close A_POSITION: Bybit LONG → Sell, BingX SHORT → Buy
+        bingxSide = 'Buy';
+        bybitSide = 'Sell';
+        actionType = 'Closing A_POSITION';
+        setTradeMessage('⏳ Closing A_POSITION (Bybit Sell + BingX Buy)...');
+      } else {
+        // Open/Increase B_POSITION: Bybit SHORT, BingX LONG
+        bingxSide = 'Buy';
+        bybitSide = 'Sell';
+        actionType = currentPositionState === 'B_POSITION' ? 'Increasing B_POSITION' : 'Opening B_POSITION';
+        setTradeMessage('⏳ Executing Trade B (Bybit Sell + BingX Buy)...');
+      }
+
       logger.info('Trade Tab', 'Manual Trade B: A売 B買', {
-        bybit: { symbol: 'KASUSDT', side: 'Sell', qty: tradeQuantity },
-        bingx: { symbol: 'KAS-USDT', side: 'Buy', qty: tradeQuantity }
+        currentPositionState,
+        actionType,
+        bybit: { symbol: 'KASUSDT', side: bybitSide, qty: tradeQuantity },
+        bingx: { symbol: 'KAS-USDT', side: bingxSide, qty: tradeQuantity }
       });
 
       const [bybitResult, bingxResult] = await Promise.all([
         bybitApi.placeOrder({
           symbol: 'KASUSDT',
-          side: 'Sell',
+          side: bybitSide,
           orderType: 'Market',
           qty: tradeQuantity
         }),
         bingxApi.placeOrder({
           symbol: 'KAS-USDT',
-          side: 'Buy',
+          side: bingxSide,
           orderType: 'Market',
           qty: tradeQuantity
         })
       ]);
 
-      setTradeMessage(`✅ A売 B買 executed!\nBybit Order: ${bybitResult.orderId}\nBingX Order: ${bingxResult.orderId}`);
-      logger.info('Trade Tab', 'Manual Trade B executed', { bybitResult, bingxResult });
+      setTradeMessage(`✅ Trade B executed (${actionType})!\nBybit Order: ${bybitResult.orderId}\nBingX Order: ${bingxResult.orderId}`);
+      logger.info('Trade Tab', 'Manual Trade B executed', { actionType, currentPositionState, bybitResult, bingxResult });
 
       // Return to IDLE mode after 5 seconds (position confirmed)
       setTimeout(() => {
