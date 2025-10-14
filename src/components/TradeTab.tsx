@@ -665,10 +665,11 @@ export function TradeTab(props: TradeTabProps) {
         const bybitPosition = openBybit.find((p: any) => p.symbol === 'KASUSDT');
 
         // Determine if we have imbalanced position
-        const hasImbalance = (bybitPosition?.side === 'Buy' || bingxAmt < 0) || (bybitPosition?.side === 'Sell' || bingxAmt > 0);
         const hasBothPositions = (bybitPosition?.side === 'Buy' && bingxAmt < 0) || (bybitPosition?.side === 'Sell' && bingxAmt > 0);
+        const hasAnyPosition = (bybitPosition !== undefined) || (bingxAmt !== 0);
+        const hasImbalance = hasAnyPosition && !hasBothPositions;
 
-        if (hasImbalance && !hasBothPositions) {
+        if (hasImbalance) {
           // One-sided position detected (片建て状態)
           imbalanceCounterRef.current++;
 
