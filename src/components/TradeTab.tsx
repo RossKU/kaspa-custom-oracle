@@ -72,15 +72,15 @@ export function TradeTab(props: TradeTabProps) {
 
   // Auto-trading trigger conditions
   const [triggerA, setTriggerA] = useState({
-    inThreshold: 0.2,      // IN threshold (%) - entry or exit condition
-    outThreshold: 0.2,     // OUT threshold (%) - currently unused
+    inThreshold: 0.2,      // IN threshold (%) - for opening positions
+    outThreshold: 0.2,     // OUT threshold (%) - for closing positions
     duration: 900,         // Continuous time (ms)
     enabled: false         // Auto-execution ON/OFF
   });
 
   const [triggerB, setTriggerB] = useState({
-    inThreshold: 0.2,
-    outThreshold: 0.2,
+    inThreshold: 0.2,      // IN threshold (%) - for opening positions
+    outThreshold: 0.2,     // OUT threshold (%) - for closing positions
     duration: 900,
     enabled: false
   });
@@ -1517,7 +1517,13 @@ export function TradeTab(props: TradeTabProps) {
               />
               <span>% IN</span>
               <input type="number" defaultValue="0" style={{ width: '50px', padding: '4px', border: '1px solid #ccc' }} />
-              <input type="number" defaultValue="0.2" step="0.1" style={{ width: '50px', padding: '4px', border: '1px solid #ccc' }} />
+              <input
+                type="number"
+                value={triggerA.outThreshold}
+                onChange={(e) => setTriggerA({ ...triggerA, outThreshold: parseFloat(e.target.value) || 0 })}
+                step="0.01"
+                style={{ width: '50px', padding: '4px', border: '1px solid #ccc' }}
+              />
               <span>% OUT</span>
               <input
                 type="text"
@@ -1598,7 +1604,13 @@ export function TradeTab(props: TradeTabProps) {
               />
               <span>% IN</span>
               <input type="number" defaultValue="0" style={{ width: '50px', padding: '4px', border: '1px solid #ccc' }} />
-              <input type="number" defaultValue="0.2" step="0.1" style={{ width: '50px', padding: '4px', border: '1px solid #ccc' }} />
+              <input
+                type="number"
+                value={triggerB.outThreshold}
+                onChange={(e) => setTriggerB({ ...triggerB, outThreshold: parseFloat(e.target.value) || 0 })}
+                step="0.01"
+                style={{ width: '50px', padding: '4px', border: '1px solid #ccc' }}
+              />
               <span>% OUT</span>
               <input
                 type="text"
