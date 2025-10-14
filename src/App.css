@@ -446,6 +446,68 @@
 }
 
 /* Trade Tab Styles */
+.trade-tab {
+  color: var(--text-primary);
+}
+
+.trade-settings-panel {
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+  padding: 20px;
+  background-color: var(--bg-secondary);
+  font-family: Arial, sans-serif;
+}
+
+.trade-tab input[type="text"],
+.trade-tab input[type="number"],
+.trade-tab select {
+  background: var(--bg-secondary) !important;
+  color: var(--text-primary) !important;
+  border: 1px solid var(--border-color) !important;
+}
+
+.trade-tab input[readonly] {
+  background: var(--bg-tertiary) !important;
+}
+
+.trade-tab label,
+.trade-tab span {
+  color: var(--text-secondary);
+}
+
+.trade-tab .divider {
+  border-top: 1px solid var(--border-color);
+}
+
+.auth-container {
+  max-width: 400px;
+  margin: 50px auto;
+  padding: 30px;
+  border: 2px solid #ffc107;
+  border-radius: 8px;
+  background-color: #fff3cd;
+}
+
+[data-theme="dark"] .auth-container {
+  background-color: #3a3000;
+  border-color: #ffc107;
+}
+
+.auth-container h3 {
+  text-align: center;
+  margin-bottom: 20px;
+}
+
+.auth-container p {
+  text-align: center;
+  color: #856404;
+  margin-bottom: 20px;
+}
+
+[data-theme="dark"] .auth-container p {
+  color: #ffcc00;
+}
+
 .coming-soon-box {
   text-align: center;
   padding: 3rem 2rem;

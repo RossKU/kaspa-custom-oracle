@@ -1235,19 +1235,12 @@ export function TradeTab(props: TradeTabProps) {
       <section className="tab-content trade-tab">
         <h2>⚡ Trade Execution</h2>
 
-        <div className="auth-container" style={{
-          maxWidth: '400px',
-          margin: '50px auto',
-          padding: '30px',
-          border: '2px solid #ffc107',
-          borderRadius: '8px',
-          backgroundColor: '#fff3cd'
-        }}>
-          <h3 style={{ textAlign: 'center', marginBottom: '20px' }}>
+        <div className="auth-container">
+          <h3>
             🔒 Authentication Required
           </h3>
 
-          <p style={{ textAlign: 'center', color: '#856404', marginBottom: '20px' }}>
+          <p>
             Trading features are protected. Enter password to continue.
           </p>
 
@@ -1318,13 +1311,7 @@ export function TradeTab(props: TradeTabProps) {
       </div>
 
       {/* Settings Panel - MT5 Style */}
-      <div style={{
-        border: '1px solid #ccc',
-        borderRadius: '4px',
-        padding: '20px',
-        backgroundColor: '#f9f9f9',
-        fontFamily: 'Arial, sans-serif'
-      }}>
+      <div className="trade-settings-panel">
         {/* Input Fields Section */}
         <div style={{ marginBottom: '20px' }}>
           <div style={{ display: 'grid', gridTemplateColumns: '120px 80px 80px auto', gap: '10px', alignItems: 'center', marginBottom: '8px' }}>
@@ -1502,7 +1489,7 @@ export function TradeTab(props: TradeTabProps) {
         </div>
 
         {/* Execution Conditions - MT5 SL Style */}
-        <div style={{ borderTop: '1px solid #ddd', paddingTop: '15px', marginTop: '15px' }}>
+        <div className="divider" style={{ paddingTop: '15px', marginTop: '15px' }}>
           <div style={{ marginBottom: '15px' }}>
             <label style={{ fontWeight: 'bold', display: 'block', marginBottom: '8px' }}>
               SL A買いB売り利用制時:
@@ -1533,7 +1520,6 @@ export function TradeTab(props: TradeTabProps) {
                   width: '60px',
                   padding: '4px',
                   border: '1px solid #ccc',
-                  backgroundColor: '#f0f0f0',
                   color: parseFloat(gapABuyBSell) < 0 ? '#dc3545' : parseFloat(gapABuyBSell) > 0 ? '#28a745' : '#666',
                   fontWeight: '600'
                 }}
@@ -1620,7 +1606,6 @@ export function TradeTab(props: TradeTabProps) {
                   width: '60px',
                   padding: '4px',
                   border: '1px solid #ccc',
-                  backgroundColor: '#f0f0f0',
                   color: parseFloat(gapBBuyASell) < 0 ? '#dc3545' : parseFloat(gapBBuyASell) > 0 ? '#28a745' : '#666',
                   fontWeight: '600'
                 }}
