@@ -711,7 +711,7 @@ export function TradeTab(props: TradeTabProps) {
     };
 
     fetchPositions();
-    const interval = setInterval(fetchPositions, 5000); // Refresh every 5 seconds
+    const interval = setInterval(fetchPositions, 9000); // Refresh every 9 seconds (reduced to avoid 403 errors)
 
     return () => {
       clearInterval(interval);
@@ -780,8 +780,8 @@ export function TradeTab(props: TradeTabProps) {
     // Initial fetch
     fetchOrderBooksAndCalculateOffset();
 
-    // Poll every 5 seconds
-    const interval = setInterval(fetchOrderBooksAndCalculateOffset, 5000);
+    // Poll every 9 seconds (reduced to avoid 403 errors)
+    const interval = setInterval(fetchOrderBooksAndCalculateOffset, 9000);
 
     return () => clearInterval(interval);
   }, [bybitApi, bingxApi, authState.isAuthenticated, tradeQuantity, pollingMode]);
