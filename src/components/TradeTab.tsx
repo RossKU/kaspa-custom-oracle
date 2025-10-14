@@ -282,21 +282,27 @@ export function TradeTab(props: TradeTabProps) {
 
       // A direction monitoring (A買いB売り)
       if (monitorStatusA.isMonitoring && posState !== 'A_POSITION') {
+        // Use OUT threshold when closing position, IN threshold when opening
+        const isClosing = (posState === 'B_POSITION');
+        const threshold = isClosing ? triggerA.outThreshold : triggerA.inThreshold;
+
         logger.debug('Trade Tab', 'Monitor A tick', {
           gapA,
-          threshold: triggerA.inThreshold,
+          threshold: threshold,
+          thresholdType: isClosing ? 'OUT (closing)' : 'IN (opening)',
           positionState: posState,
           startTime: timerRefA.current,
-          isAboveThreshold: gapA >= triggerA.inThreshold
+          isAboveThreshold: gapA >= threshold
         });
 
-        if (gapA >= triggerA.inThreshold) {
+        if (gapA >= threshold) {
           // Above threshold - start or continue monitoring
           if (timerRefA.current === null) {
             timerRefA.current = now;
             logger.info('Trade Tab', 'Monitor A: Gap above threshold, starting timer', {
               gapA,
-              threshold: triggerA.inThreshold
+              threshold: threshold,
+              thresholdType: isClosing ? 'OUT (closing)' : 'IN (opening)'
             });
             setMonitorStatusA({ startTime: now, isMonitoring: true });
           } else {
@@ -312,6 +318,8 @@ export function TradeTab(props: TradeTabProps) {
                 elapsed,
                 duration: triggerA.duration,
                 gapA,
+                threshold: threshold,
+                thresholdType: isClosing ? 'OUT (closing)' : 'IN (opening)',
                 autoEnabled: triggerA.enabled
               });
 
@@ -338,7 +346,7 @@ export function TradeTab(props: TradeTabProps) {
           if (timerRefA.current !== null) {
             logger.info('Trade Tab', 'Monitor A: Gap dropped below threshold, resetting timer', {
               gapA,
-              threshold: triggerA.inThreshold
+              threshold: threshold
             });
             timerRefA.current = null;
             setMonitorStatusA({ startTime: null, isMonitoring: true });
@@ -348,20 +356,26 @@ export function TradeTab(props: TradeTabProps) {
 
       // B direction monitoring (B買いA売り)
       if (monitorStatusB.isMonitoring && posState !== 'B_POSITION') {
+        // Use OUT threshold when closing position, IN threshold when opening
+        const isClosing = (posState === 'A_POSITION');
+        const threshold = isClosing ? triggerB.outThreshold : triggerB.inThreshold;
+
         logger.debug('Trade Tab', 'Monitor B tick', {
           gapB,
-          threshold: triggerB.inThreshold,
+          threshold: threshold,
+          thresholdType: isClosing ? 'OUT (closing)' : 'IN (opening)',
           positionState: posState,
           startTime: timerRefB.current,
-          isAboveThreshold: gapB >= triggerB.inThreshold
+          isAboveThreshold: gapB >= threshold
         });
 
-        if (gapB >= triggerB.inThreshold) {
+        if (gapB >= threshold) {
           if (timerRefB.current === null) {
             timerRefB.current = now;
             logger.info('Trade Tab', 'Monitor B: Gap above threshold, starting timer', {
               gapB,
-              threshold: triggerB.inThreshold
+              threshold: threshold,
+              thresholdType: isClosing ? 'OUT (closing)' : 'IN (opening)'
             });
             setMonitorStatusB({ startTime: now, isMonitoring: true });
           } else {
@@ -377,6 +391,8 @@ export function TradeTab(props: TradeTabProps) {
                 elapsed,
                 duration: triggerB.duration,
                 gapB,
+                threshold: threshold,
+                thresholdType: isClosing ? 'OUT (closing)' : 'IN (opening)',
                 autoEnabled: triggerB.enabled
               });
 
@@ -402,7 +418,7 @@ export function TradeTab(props: TradeTabProps) {
           if (timerRefB.current !== null) {
             logger.info('Trade Tab', 'Monitor B: Gap dropped below threshold, resetting timer', {
               gapB,
-              threshold: triggerB.inThreshold
+              threshold: threshold
             });
             timerRefB.current = null;
             setMonitorStatusB({ startTime: null, isMonitoring: true });
