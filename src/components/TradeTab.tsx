@@ -640,13 +640,13 @@ export function TradeTab(props: TradeTabProps) {
 
         // Position imbalance detection (liquidation risk)
         // Check if we have one-sided position (片建て) which indicates possible liquidation
-        const bingxPos = openBingX.find((p: any) => p.symbol === 'KAS-USDT');
-        const bingxAmt = parseFloat(bingxPos?.positionAmt || bingxPos?.availableAmt || '0');
-        const bybitPos = openBybit.find((p: any) => p.symbol === 'KASUSDT');
+        const bingxPosition = openBingX.find((p: any) => p.symbol === 'KAS-USDT');
+        const bingxAmt = parseFloat(bingxPosition?.positionAmt || bingxPosition?.availableAmt || '0');
+        const bybitPosition = openBybit.find((p: any) => p.symbol === 'KASUSDT');
 
         // Determine if we have imbalanced position
-        const hasImbalance = (bybitPos?.side === 'Buy' || bingxAmt < 0) || (bybitPos?.side === 'Sell' || bingxAmt > 0);
-        const hasBothPositions = (bybitPos?.side === 'Buy' && bingxAmt < 0) || (bybitPos?.side === 'Sell' && bingxAmt > 0);
+        const hasImbalance = (bybitPosition?.side === 'Buy' || bingxAmt < 0) || (bybitPosition?.side === 'Sell' || bingxAmt > 0);
+        const hasBothPositions = (bybitPosition?.side === 'Buy' && bingxAmt < 0) || (bybitPosition?.side === 'Sell' && bingxAmt > 0);
 
         if (hasImbalance && !hasBothPositions) {
           // One-sided position detected (片建て状態)
@@ -654,7 +654,7 @@ export function TradeTab(props: TradeTabProps) {
 
           if (imbalanceCounterRef.current === 1) {
             logger.warn('Trade Tab', '⚠️ Position imbalance detected (5s)', {
-              bybitPosition: bybitPos?.side || 'NONE',
+              bybitPosition: bybitPosition?.side || 'NONE',
               bingxAmount: bingxAmt,
               counter: imbalanceCounterRef.current
             });
@@ -663,7 +663,7 @@ export function TradeTab(props: TradeTabProps) {
           if (imbalanceCounterRef.current >= 2) {
             // 10+ seconds of imbalance - trigger emergency close
             logger.error('Trade Tab', '🚨 LIQUIDATION DETECTED (10s+)', {
-              bybitPosition: bybitPos?.side || 'NONE',
+              bybitPosition: bybitPosition?.side || 'NONE',
               bingxAmount: bingxAmt,
               counter: imbalanceCounterRef.current,
               action: 'Triggering emergency close'
