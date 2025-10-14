@@ -42,6 +42,7 @@ export function TradeTab(props: TradeTabProps) {
   // Trading state
   const [positions, setPositions] = useState<any[]>([]);
   const [tradeQuantity, setTradeQuantity] = useState('100');
+  const [maxPosition, setMaxPosition] = useState('500'); // Maximum position limit
   const [tradeMessage, setTradeMessage] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [bingxApi, setBingxApi] = useState<BingXAPI | null>(null);
@@ -1331,7 +1332,18 @@ export function TradeTab(props: TradeTabProps) {
             <input
               type="number"
               value={tradeQuantity}
-              onChange={(e) => setTradeQuantity(e.target.value)}
+              onChange={(e) => {
+                const inputValue = e.target.value;
+                const numValue = parseFloat(inputValue);
+                const maxValue = parseFloat(maxPosition);
+
+                // Cap at maxPosition if exceeded
+                if (!isNaN(numValue) && !isNaN(maxValue) && numValue > maxValue) {
+                  setTradeQuantity(maxPosition);
+                } else {
+                  setTradeQuantity(inputValue);
+                }
+              }}
               style={{ padding: '4px', border: '1px solid #ccc' }}
             />
             <span>KAS</span>
@@ -1358,9 +1370,25 @@ export function TradeTab(props: TradeTabProps) {
             </button>
           </div>
 
-          <div style={{ display: 'grid', gridTemplateColumns: '120px 80px', gap: '10px', alignItems: 'center', marginBottom: '8px' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: '120px 80px 40px', gap: '10px', alignItems: 'center', marginBottom: '8px' }}>
             <label>最大ポジション:</label>
-            <input type="number" defaultValue="500" style={{ padding: '4px', border: '1px solid #ccc' }} />
+            <input
+              type="number"
+              value={maxPosition}
+              onChange={(e) => {
+                const newMax = e.target.value;
+                setMaxPosition(newMax);
+
+                // If current tradeQuantity exceeds new max, cap it
+                const numTrade = parseFloat(tradeQuantity);
+                const numMax = parseFloat(newMax);
+                if (!isNaN(numTrade) && !isNaN(numMax) && numTrade > numMax) {
+                  setTradeQuantity(newMax);
+                }
+              }}
+              style={{ padding: '4px', border: '1px solid #ccc' }}
+            />
+            <span>KAS</span>
           </div>
 
           <div style={{ display: 'grid', gridTemplateColumns: '120px 80px 40px', gap: '10px', alignItems: 'center', marginBottom: '8px' }}>
