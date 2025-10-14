@@ -4,8 +4,16 @@
 
 import { logger } from '../utils/logger';
 
-// CORS proxy (temporary solution for browser-based testing)
+// CORS proxy configuration
 // BingX API does not allow direct browser access due to CORS policy
+//
+// IMPORTANT: Replace with your Cloudflare Workers URL to avoid rate limits!
+// See CLOUDFLARE_WORKERS_SETUP.md for deployment instructions.
+//
+// Cloudflare Workers (recommended - free 100k requests/day):
+// const CORS_PROXY = 'https://bingx-cors-proxy.YOUR-SUBDOMAIN.workers.dev/?url=';
+//
+// Current (corsproxy.io has rate limits, causes 403 errors):
 const CORS_PROXY = 'https://corsproxy.io/?';
 
 interface BingXConfig {
