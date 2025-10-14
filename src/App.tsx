@@ -193,53 +193,12 @@ function App() {
   // Manage WebSocket connections for Trade Tab monitoring
   useEffect(() => {
     if (!tradeMonitoringActive) {
-      // Monitoring stopped - reconnect previously stopped WebSockets
+      // Monitoring stopped - do NOT reconnect stopped WebSockets
+      // Keep unused exchanges stopped to reduce load and avoid 403 errors
       if (stoppedWebSocketsRef.current.length > 0) {
-        logger.info('App', 'Trade monitoring stopped, reconnecting WebSockets', {
+        logger.info('App', 'Trade monitoring stopped, keeping unused WebSockets stopped', {
           stoppedWebSockets: stoppedWebSocketsRef.current
         })
-
-        stoppedWebSocketsRef.current.forEach(exchange => {
-          if (exchange === 'Binance' && binanceMonitorRef.current) {
-            logger.info('App', 'Reconnecting Binance WebSocket')
-            binanceMonitorRef.current.connect(
-              (data) => {
-                setBinanceData(data)
-                setLastUpdateTime(new Date().toLocaleTimeString())
-              },
-              (errorMsg) => setError(errorMsg)
-            )
-          } else if (exchange === 'MEXC' && mexcMonitorRef.current) {
-            logger.info('App', 'Reconnecting MEXC WebSocket')
-            mexcMonitorRef.current.connect(
-              (data) => {
-                setMexcData(data)
-                setLastUpdateTime(new Date().toLocaleTimeString())
-              },
-              (errorMsg) => console.error('[App] MEXC error:', errorMsg)
-            )
-          } else if (exchange === 'Gate.io' && gateioMonitorRef.current) {
-            logger.info('App', 'Reconnecting Gate.io WebSocket')
-            gateioMonitorRef.current.connect(
-              (data) => {
-                setGateioData(data)
-                setLastUpdateTime(new Date().toLocaleTimeString())
-              },
-              (errorMsg) => console.error('[App] Gate.io error:', errorMsg)
-            )
-          } else if (exchange === 'Kucoin' && kucoinMonitorRef.current) {
-            logger.info('App', 'Reconnecting Kucoin WebSocket')
-            kucoinMonitorRef.current.connect(
-              (data) => {
-                setKucoinData(data)
-                setLastUpdateTime(new Date().toLocaleTimeString())
-              },
-              (errorMsg) => console.error('[App] Kucoin error:', errorMsg)
-            )
-          }
-        })
-
-        stoppedWebSocketsRef.current = []
       }
       return
     }
