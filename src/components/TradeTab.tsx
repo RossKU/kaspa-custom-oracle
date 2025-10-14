@@ -1555,6 +1555,24 @@ export function TradeTab(props: TradeTabProps) {
             }}>
               ${props.bingxData?.price?.toFixed(5) || '--'}
             </div>
+            {positions.length > 0 && (
+              <div style={{
+                marginTop: '8px',
+                padding: '8px',
+                fontSize: '14px',
+                fontWeight: 'bold',
+                backgroundColor: '#fff3cd',
+                border: '1px solid #ffc107',
+                borderRadius: '4px',
+                color: '#856404'
+              }}>
+                <div style={{ fontSize: '11px', marginBottom: '4px' }}>Position Entry:</div>
+                <div>${parseFloat(positions[0].avgPrice || positions[0].entryPrice || '0').toFixed(5)}</div>
+                <div style={{ fontSize: '11px', marginTop: '2px' }}>
+                  ({positions[0].positionSide}: {Math.abs(parseFloat(positions[0].positionAmt || positions[0].availableAmt || '0')).toFixed(0)} KAS)
+                </div>
+              </div>
+            )}
           </div>
         </div>
 
@@ -1810,6 +1828,24 @@ export function TradeTab(props: TradeTabProps) {
             }}>
               ${props.bybitData?.price?.toFixed(5) || '--'}
             </div>
+            {bybitPositions.length > 0 && (
+              <div style={{
+                marginTop: '8px',
+                padding: '8px',
+                fontSize: '14px',
+                fontWeight: 'bold',
+                backgroundColor: '#fff3cd',
+                border: '1px solid #ffc107',
+                borderRadius: '4px',
+                color: '#856404'
+              }}>
+                <div style={{ fontSize: '11px', marginBottom: '4px' }}>Position Entry:</div>
+                <div>${parseFloat(bybitPositions[0].avgPrice || '0').toFixed(5)}</div>
+                <div style={{ fontSize: '11px', marginTop: '2px' }}>
+                  ({bybitPositions[0].side === 'Buy' ? 'LONG' : 'SHORT'}: {parseFloat(bybitPositions[0].size || '0').toFixed(0)} KAS)
+                </div>
+              </div>
+            )}
           </div>
         </div>
 
