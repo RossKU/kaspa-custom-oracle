@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { TRADE_PASSWORD, SESSION_TIMEOUT } from '../types/trade';
 import type { TradeAuthState } from '../types/trade';
 import type { PriceData } from '../types/binance';
@@ -93,6 +93,10 @@ export function TradeTab(props: TradeTabProps) {
     startTime: null as number | null,
     isMonitoring: false
   });
+
+  // Timer refs for immediate start time tracking (prevents restart issues from async setState)
+  const timerRefA = useRef<number | null>(null);
+  const timerRefB = useRef<number | null>(null);
 
   // Debug logs state for in-tab monitoring
   const [debugLogs, setDebugLogs] = useState<string[]>([]);
@@ -258,20 +262,21 @@ export function TradeTab(props: TradeTabProps) {
           gapA,
           threshold: triggerA.inThreshold,
           positionState: posState,
-          startTime: monitorStatusA.startTime,
+          startTime: timerRefA.current,
           isAboveThreshold: gapA >= triggerA.inThreshold
         });
 
         if (gapA >= triggerA.inThreshold) {
           // Above threshold - start or continue monitoring
-          if (monitorStatusA.startTime === null) {
+          if (timerRefA.current === null) {
+            timerRefA.current = now;
             logger.info('Trade Tab', 'Monitor A: Gap above threshold, starting timer', {
               gapA,
               threshold: triggerA.inThreshold
             });
             setMonitorStatusA({ startTime: now, isMonitoring: true });
           } else {
-            const elapsed = now - monitorStatusA.startTime;
+            const elapsed = now - timerRefA.current;
             logger.debug('Trade Tab', 'Monitor A: Tracking duration', {
               elapsed,
               required: triggerA.duration,
@@ -291,6 +296,7 @@ export function TradeTab(props: TradeTabProps) {
                   gapA,
                   duration: elapsed
                 });
+                timerRefA.current = null;
                 setMonitorStatusA({ startTime: null, isMonitoring: false });
                 handleManualTradeA();
               } else {
@@ -298,17 +304,19 @@ export function TradeTab(props: TradeTabProps) {
                   gapA,
                   duration: elapsed
                 });
+                timerRefA.current = null;
                 setMonitorStatusA({ startTime: null, isMonitoring: false });
               }
             }
           }
         } else {
           // Below threshold - reset timer
-          if (monitorStatusA.startTime !== null) {
+          if (timerRefA.current !== null) {
             logger.info('Trade Tab', 'Monitor A: Gap dropped below threshold, resetting timer', {
               gapA,
               threshold: triggerA.inThreshold
             });
+            timerRefA.current = null;
             setMonitorStatusA({ startTime: null, isMonitoring: true });
           }
         }
@@ -320,19 +328,20 @@ export function TradeTab(props: TradeTabProps) {
           gapB,
           threshold: triggerB.inThreshold,
           positionState: posState,
-          startTime: monitorStatusB.startTime,
+          startTime: timerRefB.current,
           isAboveThreshold: gapB >= triggerB.inThreshold
         });
 
         if (gapB >= triggerB.inThreshold) {
-          if (monitorStatusB.startTime === null) {
+          if (timerRefB.current === null) {
+            timerRefB.current = now;
             logger.info('Trade Tab', 'Monitor B: Gap above threshold, starting timer', {
               gapB,
               threshold: triggerB.inThreshold
             });
             setMonitorStatusB({ startTime: now, isMonitoring: true });
           } else {
-            const elapsed = now - monitorStatusB.startTime;
+            const elapsed = now - timerRefB.current;
             logger.debug('Trade Tab', 'Monitor B: Tracking duration', {
               elapsed,
               required: triggerB.duration,
@@ -352,6 +361,7 @@ export function TradeTab(props: TradeTabProps) {
                   gapB,
                   duration: elapsed
                 });
+                timerRefB.current = null;
                 setMonitorStatusB({ startTime: null, isMonitoring: false });
                 handleManualTradeB();
               } else {
@@ -359,16 +369,18 @@ export function TradeTab(props: TradeTabProps) {
                   gapB,
                   duration: elapsed
                 });
+                timerRefB.current = null;
                 setMonitorStatusB({ startTime: null, isMonitoring: false });
               }
             }
           }
         } else {
-          if (monitorStatusB.startTime !== null) {
+          if (timerRefB.current !== null) {
             logger.info('Trade Tab', 'Monitor B: Gap dropped below threshold, resetting timer', {
               gapB,
               threshold: triggerB.inThreshold
             });
+            timerRefB.current = null;
             setMonitorStatusB({ startTime: null, isMonitoring: true });
           }
         }
@@ -1204,6 +1216,9 @@ export function TradeTab(props: TradeTabProps) {
                 const isCurrentlyMonitoring = monitorStatusA.isMonitoring || monitorStatusB.isMonitoring;
                 const newTime = isCurrentlyMonitoring ? null : Date.now();
                 const newStatus = !isCurrentlyMonitoring;
+                // Reset timer refs when toggling monitoring
+                timerRefA.current = null;
+                timerRefB.current = null;
                 setMonitorStatusA({ startTime: newTime, isMonitoring: newStatus });
                 setMonitorStatusB({ startTime: newTime, isMonitoring: newStatus });
               }}
