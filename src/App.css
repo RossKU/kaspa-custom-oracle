@@ -508,6 +508,104 @@
   color: #ffcc00;
 }
 
+/* Manual Trading Panels */
+.manual-trading-panel {
+  margin-top: 30px;
+  border-radius: 8px;
+  padding: 20px;
+  background-color: var(--bg-secondary);
+}
+
+.manual-trading-panel.bingx {
+  border: 2px solid #007bff;
+}
+
+.manual-trading-panel.bybit {
+  border: 2px solid #6f42c1;
+}
+
+.manual-trading-panel h3 {
+  margin-top: 0;
+  margin-bottom: 15px;
+}
+
+.manual-trading-panel.bingx h3 {
+  color: #007bff;
+}
+
+.manual-trading-panel.bybit h3 {
+  color: #6f42c1;
+}
+
+/* Alert/Warning boxes in trade tab */
+.trade-alert {
+  padding: 12px;
+  margin-bottom: 15px;
+  border-radius: 4px;
+}
+
+.trade-alert.warning {
+  background-color: #fff3cd;
+  border: 1px solid #ffc107;
+  color: #856404;
+}
+
+[data-theme="dark"] .trade-alert.warning {
+  background-color: #3a3000;
+  color: #ffcc00;
+}
+
+.trade-alert.success {
+  background-color: #d4edda;
+  border: 1px solid #c3e6cb;
+  color: #155724;
+}
+
+[data-theme="dark"] .trade-alert.success {
+  background-color: #1e3a2e;
+  color: #4ade80;
+}
+
+.trade-alert.error {
+  background-color: #f8d7da;
+  border: 1px solid #f5c6cb;
+  color: #721c24;
+}
+
+[data-theme="dark"] .trade-alert.error {
+  background-color: #3a1e1e;
+  color: #f87171;
+}
+
+.trade-alert.info {
+  background-color: #d1ecf1;
+  border: 1px solid #bee5eb;
+  color: #0c5460;
+}
+
+[data-theme="dark"] .trade-alert.info {
+  background-color: #1e2a3a;
+  color: #60a5fa;
+}
+
+/* Trading position displays - Override inline styles */
+.manual-trading-panel div[style*="backgroundColor: '#e9ecef'"] {
+  background-color: var(--bg-tertiary) !important;
+}
+
+.manual-trading-panel div[style*="backgroundColor: 'white'"] {
+  background-color: var(--bg-secondary) !important;
+}
+
+.manual-trading-panel div[style*="backgroundColor: '#fff3cd'"] {
+  background-color: #fff3cd !important;
+}
+
+[data-theme="dark"] .manual-trading-panel div[style*="backgroundColor: '#fff3cd'"] {
+  background-color: #3a3000 !important;
+  color: #ffcc00 !important;
+}
+
 .coming-soon-box {
   text-align: center;
   padding: 3rem 2rem;

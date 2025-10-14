@@ -1665,41 +1665,21 @@ export function TradeTab(props: TradeTabProps) {
       </div>
 
       {/* Manual Trading Section */}
-      <div style={{
-        marginTop: '30px',
-        border: '2px solid #007bff',
-        borderRadius: '8px',
-        padding: '20px',
-        backgroundColor: '#f8f9fa'
-      }}>
-        <h3 style={{ marginTop: 0, marginBottom: '15px', color: '#007bff' }}>
+      <div className="manual-trading-panel bingx">
+        <h3>
           📊 Manual Trading - BingX KAS-USDT
         </h3>
 
         {/* API Status */}
         {!bingxApi && (
-          <div style={{
-            padding: '12px',
-            marginBottom: '15px',
-            backgroundColor: '#fff3cd',
-            border: '1px solid #ffc107',
-            borderRadius: '4px',
-            color: '#856404'
-          }}>
+          <div className="trade-alert warning">
             ⚠️ BingX API not configured. Go to <strong>API Tab</strong> and set up your API keys first.
           </div>
         )}
 
         {/* Trade Message */}
         {tradeMessage && (
-          <div style={{
-            padding: '12px',
-            marginBottom: '15px',
-            backgroundColor: tradeMessage.includes('✅') ? '#d4edda' : tradeMessage.includes('❌') ? '#f8d7da' : '#d1ecf1',
-            border: `1px solid ${tradeMessage.includes('✅') ? '#c3e6cb' : tradeMessage.includes('❌') ? '#f5c6cb' : '#bee5eb'}`,
-            borderRadius: '4px',
-            color: tradeMessage.includes('✅') ? '#155724' : tradeMessage.includes('❌') ? '#721c24' : '#0c5460'
-          }}>
+          <div className={`trade-alert ${tradeMessage.includes('✅') ? 'success' : tradeMessage.includes('❌') ? 'error' : 'info'}`}>
             {tradeMessage}
           </div>
         )}
@@ -1921,15 +1901,7 @@ export function TradeTab(props: TradeTabProps) {
         </div>
 
         {/* Risk Warning */}
-        <div style={{
-          marginTop: '15px',
-          padding: '12px',
-          backgroundColor: '#f8d7da',
-          border: '1px solid #f5c6cb',
-          borderRadius: '4px',
-          fontSize: '13px',
-          color: '#721c24'
-        }}>
+        <div className="trade-alert error" style={{ marginTop: '15px', fontSize: '13px' }}>
           <strong>⚠️ Risk Warning:</strong> Trading perpetual futures involves significant risk.
           You may lose your entire investment. BingX does not offer testnet - this is REAL trading.
           Start with small amounts to test functionality.
@@ -1937,42 +1909,21 @@ export function TradeTab(props: TradeTabProps) {
       </div>
 
       {/* Bybit Manual Trading Section */}
-      <div style={{
-        marginTop: '30px',
-        border: '2px solid #6f42c1',
-        borderRadius: '8px',
-        padding: '20px',
-        backgroundColor: '#f8f9fa'
-      }}>
-        <h3 style={{ marginTop: 0, marginBottom: '15px', color: '#6f42c1' }}>
+      <div className="manual-trading-panel bybit">
+        <h3>
           📊 Manual Trading - Bybit KASUSDT
         </h3>
 
         {/* API Status */}
         {!bybitApi && (
-          <div style={{
-            padding: '12px',
-            marginBottom: '15px',
-            backgroundColor: '#fff3cd',
-            border: '1px solid #ffc107',
-            borderRadius: '4px',
-            color: '#856404'
-          }}>
+          <div className="trade-alert warning">
             ⚠️ Bybit API not configured. Go to <strong>API Tab</strong> and set up your API keys first.
           </div>
         )}
 
         {/* Trade Message */}
         {bybitTradeMessage && (
-          <div style={{
-            padding: '12px',
-            marginBottom: '15px',
-            backgroundColor: bybitTradeMessage.includes('✅') ? '#d4edda' : bybitTradeMessage.includes('❌') ? '#f8d7da' : '#d1ecf1',
-            border: `1px solid ${bybitTradeMessage.includes('✅') ? '#c3e6cb' : bybitTradeMessage.includes('❌') ? '#f5c6cb' : '#bee5eb'}`,
-            borderRadius: '4px',
-            color: bybitTradeMessage.includes('✅') ? '#155724' : bybitTradeMessage.includes('❌') ? '#721c24' : '#0c5460',
-            whiteSpace: 'pre-wrap'
-          }}>
+          <div className={`trade-alert ${bybitTradeMessage.includes('✅') ? 'success' : bybitTradeMessage.includes('❌') ? 'error' : 'info'}`} style={{ whiteSpace: 'pre-wrap' }}>
             {bybitTradeMessage}
           </div>
         )}
@@ -2193,16 +2144,8 @@ export function TradeTab(props: TradeTabProps) {
           )}
         </div>
 
-        {/* Risk Warning */}
-        <div style={{
-          marginTop: '15px',
-          padding: '12px',
-          backgroundColor: '#d1ecf1',
-          border: '1px solid #bee5eb',
-          borderRadius: '4px',
-          fontSize: '13px',
-          color: '#0c5460'
-        }}>
+        {/* Demo Trading Notice */}
+        <div className="trade-alert info" style={{ marginTop: '15px', fontSize: '13px' }}>
           <strong>ℹ️ Demo Trading Notice:</strong> This is Bybit Demo Trading with virtual funds (50,000 USDT).
           Perfect for testing strategies without real money risk. Demo data may differ from production.
         </div>
@@ -2214,12 +2157,8 @@ export function TradeTab(props: TradeTabProps) {
       </p>
 
       {/* Debug Logs Section */}
-      <div style={{
-        marginTop: '30px',
-        border: '2px solid #6c757d',
-        borderRadius: '8px',
-        padding: '20px',
-        backgroundColor: '#f8f9fa'
+      <div className="manual-trading-panel" style={{
+        border: '2px solid #6c757d'
       }}>
         <div style={{
           display: 'flex',
