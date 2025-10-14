@@ -103,6 +103,9 @@ export function TradeTab(props: TradeTabProps) {
   // Counter for consecutive detections of one-sided positions (片建て状態)
   const imbalanceCounterRef = useRef<number>(0);
 
+  // Position fetch completion flag (prevents race condition on browser reload)
+  const [positionsFetched, setPositionsFetched] = useState(false);
+
   // Debug logs state for in-tab monitoring
   const [debugLogs, setDebugLogs] = useState<string[]>([]);
 
@@ -637,6 +640,7 @@ export function TradeTab(props: TradeTabProps) {
 
         setPositions(openBingX);
         setBybitPositions(openBybit);
+        setPositionsFetched(true); // Mark initial fetch as complete
 
         // Position imbalance detection (liquidation risk)
         // Check if we have one-sided position (片建て) which indicates possible liquidation
@@ -1515,8 +1519,12 @@ export function TradeTab(props: TradeTabProps) {
               <button style={{
                 padding: '4px 8px',
                 border: '1px solid #999',
-                background: (triggerA.enabled && monitorStatusA.isMonitoring) ? '#dc3545' : '#e9ecef',
-                color: (triggerA.enabled && monitorStatusA.isMonitoring) ? 'white' : '#666',
+                background: (!positionsFetched) ? '#e9ecef' : // Loading中はグレー
+                           (triggerA.enabled && monitorStatusA.isMonitoring && positionState !== 'A_POSITION')
+                             ? '#dc3545' : '#e9ecef',
+                color: (!positionsFetched) ? '#666' :
+                       (triggerA.enabled && monitorStatusA.isMonitoring && positionState !== 'A_POSITION')
+                         ? 'white' : '#666',
                 cursor: 'default',
                 fontSize: '11px'
               }}>
@@ -1592,8 +1600,12 @@ export function TradeTab(props: TradeTabProps) {
               <button style={{
                 padding: '4px 8px',
                 border: '1px solid #999',
-                background: (triggerB.enabled && monitorStatusB.isMonitoring) ? '#dc3545' : '#e9ecef',
-                color: (triggerB.enabled && monitorStatusB.isMonitoring) ? 'white' : '#666',
+                background: (!positionsFetched) ? '#e9ecef' : // Loading中はグレー
+                           (triggerB.enabled && monitorStatusB.isMonitoring && positionState !== 'B_POSITION')
+                             ? '#dc3545' : '#e9ecef',
+                color: (!positionsFetched) ? '#666' :
+                       (triggerB.enabled && monitorStatusB.isMonitoring && positionState !== 'B_POSITION')
+                         ? 'white' : '#666',
                 cursor: 'default',
                 fontSize: '11px'
               }}>
