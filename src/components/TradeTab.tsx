@@ -99,6 +99,10 @@ export function TradeTab(props: TradeTabProps) {
   const timerRefA = useRef<number | null>(null);
   const timerRefB = useRef<number | null>(null);
 
+  // Position imbalance detection (liquidation risk)
+  // Counter for consecutive detections of one-sided positions (片建て状態)
+  const imbalanceCounterRef = useRef<number>(0);
+
   // Debug logs state for in-tab monitoring
   const [debugLogs, setDebugLogs] = useState<string[]>([]);
 
@@ -633,6 +637,50 @@ export function TradeTab(props: TradeTabProps) {
 
         setPositions(openBingX);
         setBybitPositions(openBybit);
+
+        // Position imbalance detection (liquidation risk)
+        // Check if we have one-sided position (片建て) which indicates possible liquidation
+        const bingxPos = openBingX.find((p: any) => p.symbol === 'KAS-USDT');
+        const bingxAmt = parseFloat(bingxPos?.positionAmt || bingxPos?.availableAmt || '0');
+        const bybitPos = openBybit.find((p: any) => p.symbol === 'KASUSDT');
+
+        // Determine if we have imbalanced position
+        const hasImbalance = (bybitPos?.side === 'Buy' || bingxAmt < 0) || (bybitPos?.side === 'Sell' || bingxAmt > 0);
+        const hasBothPositions = (bybitPos?.side === 'Buy' && bingxAmt < 0) || (bybitPos?.side === 'Sell' && bingxAmt > 0);
+
+        if (hasImbalance && !hasBothPositions) {
+          // One-sided position detected (片建て状態)
+          imbalanceCounterRef.current++;
+
+          if (imbalanceCounterRef.current === 1) {
+            logger.warn('Trade Tab', '⚠️ Position imbalance detected (5s)', {
+              bybitPosition: bybitPos?.side || 'NONE',
+              bingxAmount: bingxAmt,
+              counter: imbalanceCounterRef.current
+            });
+          }
+
+          if (imbalanceCounterRef.current >= 2) {
+            // 10+ seconds of imbalance - trigger emergency close
+            logger.error('Trade Tab', '🚨 LIQUIDATION DETECTED (10s+)', {
+              bybitPosition: bybitPos?.side || 'NONE',
+              bingxAmount: bingxAmt,
+              counter: imbalanceCounterRef.current,
+              action: 'Triggering emergency close'
+            });
+
+            // Execute emergency close
+            handleEmergencyCloseAll();
+          }
+        } else {
+          // Balanced or no positions - reset counter
+          if (imbalanceCounterRef.current > 0) {
+            logger.info('Trade Tab', '✅ Position balance restored', {
+              previousCounter: imbalanceCounterRef.current
+            });
+            imbalanceCounterRef.current = 0;
+          }
+        }
       } catch (error) {
         logger.error('Trade Tab', 'Failed to fetch positions', {
           error: error instanceof Error ? error.message : String(error)
@@ -839,6 +887,49 @@ export function TradeTab(props: TradeTabProps) {
       logger.error('Trade Tab', 'Close all positions failed', { error: errorMsg });
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  // Emergency position close (both exchanges, no confirmation)
+  // Triggered by liquidation detection (10+ seconds of position imbalance)
+  const handleEmergencyCloseAll = async () => {
+    if (!bingxApi || !bybitApi) return;
+
+    logger.error('Trade Tab', '🚨 EMERGENCY CLOSE TRIGGERED', {
+      reason: 'Position imbalance detected (likely liquidation)',
+      imbalanceCount: imbalanceCounterRef.current
+    });
+
+    setIsLoading(true);
+    setBybitIsLoading(true);
+    setTradeMessage('🚨 EMERGENCY: Closing all positions on both exchanges...');
+    setBybitTradeMessage('🚨 EMERGENCY: Closing all positions on both exchanges...');
+
+    try {
+      // Close all positions on both exchanges simultaneously
+      const [bingxResult, bybitResult] = await Promise.all([
+        bingxApi.closeAllPositions(),
+        bybitApi.closeAllPositions()
+      ]);
+
+      const successMsg = `🚨 EMERGENCY CLOSE COMPLETED\nBingX: ${bingxResult.message}\nBybit: ${bybitResult.message}`;
+      setTradeMessage(successMsg);
+      setBybitTradeMessage(successMsg);
+
+      logger.error('Trade Tab', '✅ Emergency close completed', {
+        bingxResult,
+        bybitResult
+      });
+    } catch (error) {
+      const errorMsg = error instanceof Error ? error.message : String(error);
+      const failMsg = `🚨 EMERGENCY CLOSE FAILED: ${errorMsg}`;
+      setTradeMessage(failMsg);
+      setBybitTradeMessage(failMsg);
+      logger.error('Trade Tab', '❌ Emergency close failed', { error: errorMsg });
+    } finally {
+      setIsLoading(false);
+      setBybitIsLoading(false);
+      imbalanceCounterRef.current = 0; // Reset counter
     }
   };
 
