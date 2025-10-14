@@ -19,6 +19,7 @@ interface TradeTabProps {
   gateioData: GateioPriceData | null;
   kucoinData: KucoinPriceData | null;
   bingxData: BingXPriceData | null;
+  onMonitoringChange?: (isMonitoring: boolean, exchangeA: string, exchangeB: string) => void;
 }
 
 // Polling mode for adaptive API request management
@@ -242,6 +243,22 @@ export function TradeTab(props: TradeTabProps) {
       logger.info('Trade Tab', 'Polling mode: IDLE (Position polling only)');
     }
   }, [monitorStatusA.isMonitoring, monitorStatusB.isMonitoring, pollingMode, authState.isAuthenticated]);
+
+  // Notify App.tsx of monitoring state changes (for WebSocket management)
+  useEffect(() => {
+    if (!authState.isAuthenticated) return;
+
+    const isMonitoring = monitorStatusA.isMonitoring || monitorStatusB.isMonitoring;
+
+    if (props.onMonitoringChange) {
+      props.onMonitoringChange(isMonitoring, exchangeA, exchangeB);
+      logger.info('Trade Tab', 'Notifying App of monitoring state change', {
+        isMonitoring,
+        exchangeA,
+        exchangeB
+      });
+    }
+  }, [monitorStatusA.isMonitoring, monitorStatusB.isMonitoring, exchangeA, exchangeB, authState.isAuthenticated, props]);
 
   // Phase 4: 100ms monitoring logic for auto-trading
   useEffect(() => {

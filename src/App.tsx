@@ -35,6 +35,18 @@ function App() {
   const kucoinMonitorRef = useRef<KucoinPriceMonitor | null>(null)
   const bingxMonitorRef = useRef<BingXPriceMonitor | null>(null)
 
+  // WebSocket management state for Trade Tab
+  const [tradeMonitoringActive, setTradeMonitoringActive] = useState(false)
+  const [activeExchanges, setActiveExchanges] = useState<string[]>([])
+  const stoppedWebSocketsRef = useRef<string[]>([])
+
+  // Handle monitoring state changes from TradeTab
+  const handleMonitoringChange = (isMonitoring: boolean, exchangeA: string, exchangeB: string) => {
+    logger.info('App', 'Trade monitoring state changed', { isMonitoring, exchangeA, exchangeB })
+    setTradeMonitoringActive(isMonitoring)
+    setActiveExchanges([exchangeA, exchangeB])
+  }
+
   // Subscribe to debug logs
   useEffect(() => {
     const unsubscribe = logger.subscribe((logs) => {
@@ -177,6 +189,94 @@ function App() {
     }
   }, [])
 
+  // Manage WebSocket connections for Trade Tab monitoring
+  useEffect(() => {
+    if (!tradeMonitoringActive) {
+      // Monitoring stopped - reconnect previously stopped WebSockets
+      if (stoppedWebSocketsRef.current.length > 0) {
+        logger.info('App', 'Trade monitoring stopped, reconnecting WebSockets', {
+          stoppedWebSockets: stoppedWebSocketsRef.current
+        })
+
+        stoppedWebSocketsRef.current.forEach(exchange => {
+          if (exchange === 'Binance' && binanceMonitorRef.current) {
+            logger.info('App', 'Reconnecting Binance WebSocket')
+            binanceMonitorRef.current.connect(
+              (data) => {
+                setBinanceData(data)
+                setLastUpdateTime(new Date().toLocaleTimeString())
+              },
+              (errorMsg) => setError(errorMsg)
+            )
+          } else if (exchange === 'MEXC' && mexcMonitorRef.current) {
+            logger.info('App', 'Reconnecting MEXC WebSocket')
+            mexcMonitorRef.current.connect(
+              (data) => {
+                setMexcData(data)
+                setLastUpdateTime(new Date().toLocaleTimeString())
+              },
+              (errorMsg) => console.error('[App] MEXC error:', errorMsg)
+            )
+          } else if (exchange === 'Gate.io' && gateioMonitorRef.current) {
+            logger.info('App', 'Reconnecting Gate.io WebSocket')
+            gateioMonitorRef.current.connect(
+              (data) => {
+                setGateioData(data)
+                setLastUpdateTime(new Date().toLocaleTimeString())
+              },
+              (errorMsg) => console.error('[App] Gate.io error:', errorMsg)
+            )
+          } else if (exchange === 'Kucoin' && kucoinMonitorRef.current) {
+            logger.info('App', 'Reconnecting Kucoin WebSocket')
+            kucoinMonitorRef.current.connect(
+              (data) => {
+                setKucoinData(data)
+                setLastUpdateTime(new Date().toLocaleTimeString())
+              },
+              (errorMsg) => console.error('[App] Kucoin error:', errorMsg)
+            )
+          }
+        })
+
+        stoppedWebSocketsRef.current = []
+      }
+      return
+    }
+
+    // Monitoring started - stop unused WebSockets
+    const allExchanges = ['Binance', 'MEXC', 'Bybit', 'Gate.io', 'Kucoin', 'BingX']
+    const unusedExchanges = allExchanges.filter(ex => !activeExchanges.includes(ex))
+
+    logger.info('App', 'Trade monitoring started, stopping unused WebSockets', {
+      activeExchanges,
+      unusedExchanges
+    })
+
+    const stopped: string[] = []
+
+    unusedExchanges.forEach(exchange => {
+      if (exchange === 'Binance' && binanceMonitorRef.current) {
+        logger.info('App', 'Stopping Binance WebSocket')
+        binanceMonitorRef.current.disconnect()
+        stopped.push('Binance')
+      } else if (exchange === 'MEXC' && mexcMonitorRef.current) {
+        logger.info('App', 'Stopping MEXC WebSocket')
+        mexcMonitorRef.current.disconnect()
+        stopped.push('MEXC')
+      } else if (exchange === 'Gate.io' && gateioMonitorRef.current) {
+        logger.info('App', 'Stopping Gate.io WebSocket')
+        gateioMonitorRef.current.disconnect()
+        stopped.push('Gate.io')
+      } else if (exchange === 'Kucoin' && kucoinMonitorRef.current) {
+        logger.info('App', 'Stopping Kucoin WebSocket')
+        kucoinMonitorRef.current.disconnect()
+        stopped.push('Kucoin')
+      }
+    })
+
+    stoppedWebSocketsRef.current = stopped
+  }, [tradeMonitoringActive, activeExchanges])
+
   return (
     <div className="app">
       <header className="header">
@@ -246,6 +346,7 @@ function App() {
             gateioData={gateioData}
             kucoinData={kucoinData}
             bingxData={bingxData}
+            onMonitoringChange={handleMonitoringChange}
           />
         )}
         {activeTab === 'settings' && <SettingsTab />}
