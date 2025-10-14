@@ -937,6 +937,12 @@ export function TradeTab(props: TradeTabProps) {
       setTradeMessage(successMsg);
       setBybitTradeMessage(successMsg);
 
+      // Stop GAP monitoring after emergency close
+      setMonitorStatusA({ startTime: null, isMonitoring: false });
+      setMonitorStatusB({ startTime: null, isMonitoring: false });
+      timerRefA.current = null;
+      timerRefB.current = null;
+
       logger.error('Trade Tab', '✅ Emergency close completed', {
         bingxResult,
         bybitResult
