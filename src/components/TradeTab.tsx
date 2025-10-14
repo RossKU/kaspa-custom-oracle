@@ -258,7 +258,7 @@ export function TradeTab(props: TradeTabProps) {
         exchangeB
       });
     }
-  }, [monitorStatusA.isMonitoring, monitorStatusB.isMonitoring, exchangeA, exchangeB, authState.isAuthenticated, props]);
+  }, [monitorStatusA.isMonitoring, monitorStatusB.isMonitoring, exchangeA, exchangeB, authState.isAuthenticated, props.onMonitoringChange]);
 
   // Phase 4: 100ms monitoring logic for auto-trading
   useEffect(() => {

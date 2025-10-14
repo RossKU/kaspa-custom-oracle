@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import { BinancePriceMonitor } from './services/binance'
 import { MexcPriceMonitor, type MexcPriceData } from './services/mexc'
 import { BybitPriceMonitor, type BybitPriceData } from './services/bybit'
@@ -41,11 +41,12 @@ function App() {
   const stoppedWebSocketsRef = useRef<string[]>([])
 
   // Handle monitoring state changes from TradeTab
-  const handleMonitoringChange = (isMonitoring: boolean, exchangeA: string, exchangeB: string) => {
+  // useCallback prevents infinite loop by keeping function reference stable
+  const handleMonitoringChange = useCallback((isMonitoring: boolean, exchangeA: string, exchangeB: string) => {
     logger.info('App', 'Trade monitoring state changed', { isMonitoring, exchangeA, exchangeB })
     setTradeMonitoringActive(isMonitoring)
     setActiveExchanges([exchangeA, exchangeB])
-  }
+  }, [])
 
   // Subscribe to debug logs
   useEffect(() => {
