@@ -187,6 +187,24 @@ export function TradeTab(props: TradeTabProps) {
   // Get current position state (for auto-trading)
   const positionState = getPositionState();
 
+  // Sync trigger duration A with UI selection
+  useEffect(() => {
+    const newDuration = triggerDurationAType === 'custom'
+      ? parseInt(triggerDurationACustom) || 900
+      : parseInt(triggerDurationAType);
+
+    setTriggerA(prev => ({ ...prev, duration: newDuration }));
+  }, [triggerDurationAType, triggerDurationACustom]);
+
+  // Sync trigger duration B with UI selection
+  useEffect(() => {
+    const newDuration = triggerDurationBType === 'custom'
+      ? parseInt(triggerDurationBCustom) || 900
+      : parseInt(triggerDurationBType);
+
+    setTriggerB(prev => ({ ...prev, duration: newDuration }));
+  }, [triggerDurationBType, triggerDurationBCustom]);
+
   // Log position state changes (debug only)
   useEffect(() => {
     if (authState.isAuthenticated) {
