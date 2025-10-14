@@ -605,20 +605,10 @@ export function TradeTab(props: TradeTabProps) {
     }
   }, [authState.isAuthenticated]);
 
-  // Fetch BingX positions periodically
-  // Only runs in IDLE and TRADING modes (adaptive polling)
+  // Fetch BingX and Bybit positions periodically (always runs)
+  // Continuous 5-second polling for liquidation risk detection
   useEffect(() => {
     if (!bingxApi || !authState.isAuthenticated) {
-      logger.info('Trade Tab', 'Position fetcher not starting', {
-        hasBingxApi: !!bingxApi,
-        isAuthenticated: authState.isAuthenticated
-      });
-      return;
-    }
-
-    // MONITORING mode: Skip position polling (order book polling only)
-    if (pollingMode === 'MONITORING') {
-      logger.info('Trade Tab', 'Position fetcher paused (MONITORING mode)');
       return;
     }
 
@@ -654,10 +644,9 @@ export function TradeTab(props: TradeTabProps) {
     const interval = setInterval(fetchPositions, 5000); // Refresh every 5 seconds
 
     return () => {
-      logger.info('Trade Tab', 'Stopping position fetcher');
       clearInterval(interval);
     };
-  }, [bingxApi, bybitApi, authState.isAuthenticated, pollingMode]);
+  }, [bingxApi, bybitApi, authState.isAuthenticated]);
 
   // Fetch Order Book depth and calculate slippage offset (every 5 seconds)
   // This calculates the difference between WebSocket Best Bid/Ask and Order Book Effective prices
