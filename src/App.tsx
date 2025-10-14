@@ -28,6 +28,11 @@ function App() {
   const [error, setError] = useState<string | null>(null)
   const [lastUpdateTime, setLastUpdateTime] = useState<string>('')
   const [debugLogs, setDebugLogs] = useState<string[]>([])
+  const [darkMode, setDarkMode] = useState<boolean>(() => {
+    // Load dark mode preference from localStorage
+    const saved = localStorage.getItem('darkMode')
+    return saved ? JSON.parse(saved) : false
+  })
   const binanceMonitorRef = useRef<BinancePriceMonitor | null>(null)
   const mexcMonitorRef = useRef<MexcPriceMonitor | null>(null)
   const bybitMonitorRef = useRef<BybitPriceMonitor | null>(null)
@@ -47,6 +52,12 @@ function App() {
     setTradeMonitoringActive(isMonitoring)
     setActiveExchanges([exchangeA, exchangeB])
   }, [])
+
+  // Dark mode persistence
+  useEffect(() => {
+    localStorage.setItem('darkMode', JSON.stringify(darkMode))
+    document.documentElement.setAttribute('data-theme', darkMode ? 'dark' : 'light')
+  }, [darkMode])
 
   // Subscribe to debug logs
   useEffect(() => {
@@ -240,7 +251,16 @@ function App() {
   return (
     <div className="app">
       <header className="header">
-        <h1>Kaspa Custom Oracle</h1>
+        <div className="header-top">
+          <h1>Kaspa Custom Oracle</h1>
+          <button
+            className="theme-toggle"
+            onClick={() => setDarkMode(!darkMode)}
+            title={darkMode ? 'Switch to Light Mode' : 'Switch to Dark Mode'}
+          >
+            {darkMode ? '☀️' : '🌙'}
+          </button>
+        </div>
         <div className="status-bar">
           <span className="status-item">
             Status: <span className={`status-badge ${isConnecting ? 'connecting' : error ? 'error' : 'connected'}`}>

@@ -10,8 +10,17 @@ body {
     sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+:root[data-theme="light"] body {
   background-color: #f9f9f9;
   color: #333;
+}
+
+:root[data-theme="dark"] body {
+  background-color: #1a1a1a;
+  color: #e0e0e0;
 }
 
 #root {
