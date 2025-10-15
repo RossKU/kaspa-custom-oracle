@@ -358,6 +358,34 @@ export function TradeTab(props: TradeTabProps) {
         if (!isNaN(gapA) && !isNaN(gapB)) {
           const midpoint = (gapA + gapB) / 2;
 
+          // Detailed debug log for gap calculation verification (1 sample/second - safe)
+          logger.debug('Trade Tab', 'Gap history sample added', {
+            timestamp: now,
+            exchangeA: exchangeA,
+            exchangeB: exchangeB,
+            // Exchange A data (e.g., Bybit)
+            exchangeA_bid: exchangeAData?.bid.toFixed(6) || 'N/A',
+            exchangeA_ask: exchangeAData?.ask.toFixed(6) || 'N/A',
+            // Exchange B data (e.g., BingX)
+            exchangeB_bid: exchangeBData?.bid.toFixed(6) || 'N/A',
+            exchangeB_ask: exchangeBData?.ask.toFixed(6) || 'N/A',
+            // Gap A: Buy at A (ask), Sell at B (bid)
+            gapA_direction: `Buy ${exchangeA} Sell ${exchangeB}`,
+            gapA_formula: exchangeAData && exchangeBData
+              ? `(${exchangeBData.bid.toFixed(6)} - ${exchangeAData.ask.toFixed(6)}) / ${exchangeAData.ask.toFixed(6)} * 100`
+              : 'N/A',
+            gapA_raw: gapA.toFixed(4),
+            // Gap B: Buy at B (ask), Sell at A (bid)
+            gapB_direction: `Buy ${exchangeB} Sell ${exchangeA}`,
+            gapB_formula: exchangeAData && exchangeBData
+              ? `(${exchangeAData.bid.toFixed(6)} - ${exchangeBData.ask.toFixed(6)}) / ${exchangeBData.ask.toFixed(6)} * 100`
+              : 'N/A',
+            gapB_raw: gapB.toFixed(4),
+            // Midpoint calculation
+            midpoint: midpoint.toFixed(4),
+            midpoint_formula: `(${gapA.toFixed(4)} + ${gapB.toFixed(4)}) / 2 = ${midpoint.toFixed(4)}`
+          });
+
           setGapHistory(prev => {
             // Add new sample
             const newHistory = [...prev, {
