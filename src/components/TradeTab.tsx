@@ -103,7 +103,7 @@ export function TradeTab(props: TradeTabProps) {
   // Trading mutex and cooldown (prevents race conditions and rapid re-execution)
   const [isTrading, setIsTrading] = useState(false);
   const lastTradeTimeRef = useRef<number>(0);
-  const COOLDOWN_PERIOD = 30000; // 30 seconds cooldown after auto-execution
+  const [cooldownPeriod, setCooldownPeriod] = useState(30); // Default: 30 seconds (configurable)
 
   // Position imbalance detection (liquidation risk)
   // Counter for consecutive detections of one-sided positions (片建て状態)
@@ -344,7 +344,8 @@ export function TradeTab(props: TradeTabProps) {
               });
 
               if (triggerA.enabled) {
-                // Check cooldown period (30s) and trading mutex
+                // Check cooldown period and trading mutex
+                const cooldownMs = cooldownPeriod * 1000; // Convert seconds to milliseconds
                 const timeSinceLastTrade = now - lastTradeTimeRef.current;
                 if (isTrading) {
                   logger.warn('Trade Tab', 'Monitor A: Trade already in progress, skipping', {
@@ -353,10 +354,11 @@ export function TradeTab(props: TradeTabProps) {
                   });
                   return;
                 }
-                if (timeSinceLastTrade < COOLDOWN_PERIOD) {
+                if (timeSinceLastTrade < cooldownMs) {
                   logger.warn('Trade Tab', 'Monitor A: Cooldown active, skipping', {
                     timeSinceLastTrade,
-                    cooldownRemaining: COOLDOWN_PERIOD - timeSinceLastTrade
+                    cooldownPeriod: cooldownPeriod,
+                    cooldownRemaining: cooldownMs - timeSinceLastTrade
                   });
                   return;
                 }
@@ -449,7 +451,8 @@ export function TradeTab(props: TradeTabProps) {
               });
 
               if (triggerB.enabled) {
-                // Check cooldown period (30s) and trading mutex
+                // Check cooldown period and trading mutex
+                const cooldownMs = cooldownPeriod * 1000; // Convert seconds to milliseconds
                 const timeSinceLastTrade = now - lastTradeTimeRef.current;
                 if (isTrading) {
                   logger.warn('Trade Tab', 'Monitor B: Trade already in progress, skipping', {
@@ -458,10 +461,11 @@ export function TradeTab(props: TradeTabProps) {
                   });
                   return;
                 }
-                if (timeSinceLastTrade < COOLDOWN_PERIOD) {
+                if (timeSinceLastTrade < cooldownMs) {
                   logger.warn('Trade Tab', 'Monitor B: Cooldown active, skipping', {
                     timeSinceLastTrade,
-                    cooldownRemaining: COOLDOWN_PERIOD - timeSinceLastTrade
+                    cooldownPeriod: cooldownPeriod,
+                    cooldownRemaining: cooldownMs - timeSinceLastTrade
                   });
                   return;
                 }
@@ -1539,7 +1543,14 @@ export function TradeTab(props: TradeTabProps) {
 
           <div style={{ display: 'grid', gridTemplateColumns: '120px 80px 40px', gap: '10px', alignItems: 'center', marginBottom: '8px' }}>
             <label>実行間隔:</label>
-            <input type="number" defaultValue="5" style={{ padding: '4px', border: '1px solid #ccc' }} />
+            <input
+              type="number"
+              value={cooldownPeriod}
+              onChange={(e) => setCooldownPeriod(parseInt(e.target.value) || 30)}
+              min="1"
+              max="300"
+              style={{ padding: '4px', border: '1px solid #ccc' }}
+            />
             <span>秒</span>
           </div>
         </div>
