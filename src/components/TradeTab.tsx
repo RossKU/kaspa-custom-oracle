@@ -11,6 +11,7 @@ import { logger } from '../utils/logger';
 import BingXAPI from '../services/bingx-api';
 import BybitAPI from '../services/bybit-api';
 import { calculateEffectivePrices } from '../utils/orderbook';
+import { KeepAwake } from '../utils/keepAwake';
 
 interface TradeTabProps {
   binanceData: PriceData | null;
@@ -140,6 +141,10 @@ export function TradeTab(props: TradeTabProps) {
   // MONITORING: Order book polling only (Gap calculation)
   // TRADING: Position polling only (after trade execution)
   const [pollingMode, setPollingMode] = useState<PollingMode>('IDLE');
+
+  // Keep-Awake state
+  const [keepAwakeEnabled, setKeepAwakeEnabled] = useState(false);
+  const keepAwakeRef = useRef<KeepAwake | null>(null);
 
   // Get Bid/Ask prices from exchange name
   // For Bybit and BingX: adds slippage offset calculated from Order Book depth
@@ -295,6 +300,18 @@ export function TradeTab(props: TradeTabProps) {
       });
     }
   }, [triggerA, triggerB, monitorStatusA, monitorStatusB, authState.isAuthenticated]);
+
+  // Initialize KeepAwake
+  useEffect(() => {
+    keepAwakeRef.current = new KeepAwake();
+
+    return () => {
+      // Cleanup on unmount
+      if (keepAwakeRef.current) {
+        keepAwakeRef.current.stop();
+      }
+    };
+  }, []);
 
   // Adaptive polling mode management (CORS proxy load reduction)
   useEffect(() => {
@@ -1497,6 +1514,27 @@ export function TradeTab(props: TradeTabProps) {
     }
   };
 
+  const handleKeepAwakeToggle = async () => {
+    if (!keepAwakeRef.current) return;
+
+    try {
+      if (keepAwakeEnabled) {
+        await keepAwakeRef.current.stop();
+        setKeepAwakeEnabled(false);
+        logger.info('Trade Tab', 'Keep-Awake disabled');
+      } else {
+        await keepAwakeRef.current.start();
+        setKeepAwakeEnabled(true);
+        logger.info('Trade Tab', 'Keep-Awake enabled');
+      }
+    } catch (error) {
+      logger.error('Trade Tab', 'Keep-Awake toggle failed', {
+        error: error instanceof Error ? error.message : String(error)
+      });
+      alert('Keep-Awake mode not supported in this browser/device');
+    }
+  };
+
   // Login screen
   if (!authState.isAuthenticated) {
     return (
@@ -1756,6 +1794,32 @@ export function TradeTab(props: TradeTabProps) {
               オフセット: {offsetMovingAvg.toFixed(4)}% | サンプル数: {gapHistory.length}
             </div>
           )}
+        </div>
+
+        {/* Keep-Awake Toggle */}
+        <div style={{ marginTop: '15px' }}>
+          <button
+            onClick={handleKeepAwakeToggle}
+            style={{
+              padding: '8px 16px',
+              fontSize: '14px',
+              cursor: 'pointer',
+              backgroundColor: keepAwakeEnabled ? '#28a745' : '#6c757d',
+              color: 'white',
+              border: 'none',
+              borderRadius: '4px',
+              transition: 'background-color 0.3s'
+            }}
+          >
+            {keepAwakeEnabled ? '🔋 Keep-Awake: ON' : '💤 Keep-Awake: OFF'}
+          </button>
+          <div style={{
+            fontSize: '11px',
+            color: '#666',
+            marginTop: '5px'
+          }}>
+            Prevents browser throttling when tab is in background (Desktop only)
+          </div>
         </div>
 
         {/* Comparison Settings */}
