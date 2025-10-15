@@ -162,19 +162,29 @@ export function TradeTab(props: TradeTabProps) {
   const getPositionState = (): PositionState => {
     // Check BingX positions
     const bingxPos = positions.find((p: any) => p.symbol === 'KAS-USDT');
+    const bingxPositionSide = bingxPos?.positionSide;  // 'LONG' or 'SHORT'
     const bingxAmt = parseFloat(bingxPos?.positionAmt || bingxPos?.availableAmt || '0');
 
     // Check Bybit positions
     const bybitPos = bybitPositions.find((p: any) => p.symbol === 'KASUSDT');
 
+    // Use positionSide if available (more reliable), fallback to amount sign
+    const isBingxShort = bingxPositionSide
+      ? bingxPositionSide === 'SHORT'
+      : bingxAmt < 0;
+
+    const isBingxLong = bingxPositionSide
+      ? bingxPositionSide === 'LONG'
+      : bingxAmt > 0;
+
     // Determine position state
     // A_POSITION = Bybit LONG or BingX SHORT
-    if (bybitPos?.side === 'Buy' || bingxAmt < 0) {
+    if (bybitPos?.side === 'Buy' || isBingxShort) {
       return 'A_POSITION';
     }
 
     // B_POSITION = Bybit SHORT or BingX LONG
-    if (bybitPos?.side === 'Sell' || bingxAmt > 0) {
+    if (bybitPos?.side === 'Sell' || isBingxLong) {
       return 'B_POSITION';
     }
 
@@ -731,13 +741,36 @@ export function TradeTab(props: TradeTabProps) {
         // Position imbalance detection (liquidation risk)
         // Check if we have one-sided position (片建て) which indicates possible liquidation
         const bingxPosition = openBingX.find((p: any) => p.symbol === 'KAS-USDT');
+        const bingxPositionSide = bingxPosition?.positionSide;  // 'LONG' or 'SHORT'
         const bingxAmt = parseFloat(bingxPosition?.positionAmt || bingxPosition?.availableAmt || '0');
         const bybitPosition = openBybit.find((p: any) => p.symbol === 'KASUSDT');
 
+        // Use positionSide if available (more reliable), fallback to amount sign
+        const isBingxShort = bingxPositionSide
+          ? bingxPositionSide === 'SHORT'
+          : bingxAmt < 0;
+
+        const isBingxLong = bingxPositionSide
+          ? bingxPositionSide === 'LONG'
+          : bingxAmt > 0;
+
         // Determine if we have imbalanced position
-        const hasBothPositions = (bybitPosition?.side === 'Buy' && bingxAmt < 0) || (bybitPosition?.side === 'Sell' && bingxAmt > 0);
+        // A_POSITION (valid): Bybit LONG + BingX SHORT
+        // B_POSITION (valid): Bybit SHORT + BingX LONG
+        const isValidAPosition = bybitPosition?.side === 'Buy' && isBingxShort;
+        const isValidBPosition = bybitPosition?.side === 'Sell' && isBingxLong;
+        const hasBothPositions = isValidAPosition || isValidBPosition;
+
         const hasAnyPosition = (bybitPosition !== undefined) || (bingxAmt !== 0);
-        const hasImbalance = hasAnyPosition && !hasBothPositions;
+
+        // Additional safety: if both exchanges have same position count, it's likely valid
+        // (e.g., both have 1 position = normal A_POSITION or B_POSITION)
+        const positionCountMatch = openBingX.length === openBybit.length && openBingX.length > 0;
+
+        // Only detect imbalance if:
+        // 1. We have positions but they're not matched properly
+        // 2. Position counts don't match (one exchange has more/less positions)
+        const hasImbalance = hasAnyPosition && !hasBothPositions && !positionCountMatch;
 
         if (hasImbalance) {
           // One-sided position detected (片建て状態)
@@ -746,7 +779,9 @@ export function TradeTab(props: TradeTabProps) {
           if (imbalanceCounterRef.current === 1) {
             logger.warn('Trade Tab', '⚠️ Position imbalance detected (5s)', {
               bybitPosition: bybitPosition?.side || 'NONE',
+              bingxPositionSide: bingxPositionSide || 'NONE',
               bingxAmount: bingxAmt,
+              positionCountMatch,
               counter: imbalanceCounterRef.current
             });
           }
@@ -755,7 +790,9 @@ export function TradeTab(props: TradeTabProps) {
             // 10+ seconds of imbalance - trigger emergency close
             logger.error('Trade Tab', '🚨 LIQUIDATION DETECTED (10s+)', {
               bybitPosition: bybitPosition?.side || 'NONE',
+              bingxPositionSide: bingxPositionSide || 'NONE',
               bingxAmount: bingxAmt,
+              positionCountMatch,
               counter: imbalanceCounterRef.current,
               action: 'Triggering emergency close'
             });
