@@ -100,6 +100,11 @@ export function TradeTab(props: TradeTabProps) {
   const timerRefA = useRef<number | null>(null);
   const timerRefB = useRef<number | null>(null);
 
+  // Trading mutex and cooldown (prevents race conditions and rapid re-execution)
+  const [isTrading, setIsTrading] = useState(false);
+  const lastTradeTimeRef = useRef<number>(0);
+  const COOLDOWN_PERIOD = 30000; // 30 seconds cooldown after auto-execution
+
   // Position imbalance detection (liquidation risk)
   // Counter for consecutive detections of one-sided positions (片建て状態)
   const imbalanceCounterRef = useRef<number>(0);
@@ -325,13 +330,36 @@ export function TradeTab(props: TradeTabProps) {
               });
 
               if (triggerA.enabled) {
+                // Check cooldown period (30s) and trading mutex
+                const timeSinceLastTrade = now - lastTradeTimeRef.current;
+                if (isTrading) {
+                  logger.warn('Trade Tab', 'Monitor A: Trade already in progress, skipping', {
+                    isTrading,
+                    timeSinceLastTrade
+                  });
+                  return;
+                }
+                if (timeSinceLastTrade < COOLDOWN_PERIOD) {
+                  logger.warn('Trade Tab', 'Monitor A: Cooldown active, skipping', {
+                    timeSinceLastTrade,
+                    cooldownRemaining: COOLDOWN_PERIOD - timeSinceLastTrade
+                  });
+                  return;
+                }
+
                 logger.info('Trade Tab', 'Monitor A: AUTO-EXECUTION triggered', {
                   gapA,
-                  duration: elapsed
+                  duration: elapsed,
+                  timeSinceLastTrade
                 });
                 timerRefA.current = null;
                 setMonitorStatusA({ startTime: null, isMonitoring: true }); // Keep monitoring active
-                handleManualTradeA();
+                setIsTrading(true); // Set mutex
+                lastTradeTimeRef.current = now; // Update last trade time
+                handleManualTradeA().finally(() => {
+                  // Clear mutex after trade completes (success or error)
+                  setTimeout(() => setIsTrading(false), 2000); // 2s buffer for position settlement
+                });
               } else {
                 logger.info('Trade Tab', 'Monitor A: Manual confirmation required', {
                   gapA,
@@ -398,13 +426,36 @@ export function TradeTab(props: TradeTabProps) {
               });
 
               if (triggerB.enabled) {
+                // Check cooldown period (30s) and trading mutex
+                const timeSinceLastTrade = now - lastTradeTimeRef.current;
+                if (isTrading) {
+                  logger.warn('Trade Tab', 'Monitor B: Trade already in progress, skipping', {
+                    isTrading,
+                    timeSinceLastTrade
+                  });
+                  return;
+                }
+                if (timeSinceLastTrade < COOLDOWN_PERIOD) {
+                  logger.warn('Trade Tab', 'Monitor B: Cooldown active, skipping', {
+                    timeSinceLastTrade,
+                    cooldownRemaining: COOLDOWN_PERIOD - timeSinceLastTrade
+                  });
+                  return;
+                }
+
                 logger.info('Trade Tab', 'Monitor B: AUTO-EXECUTION triggered', {
                   gapB,
-                  duration: elapsed
+                  duration: elapsed,
+                  timeSinceLastTrade
                 });
                 timerRefB.current = null;
                 setMonitorStatusB({ startTime: null, isMonitoring: true }); // Keep monitoring active
-                handleManualTradeB();
+                setIsTrading(true); // Set mutex
+                lastTradeTimeRef.current = now; // Update last trade time
+                handleManualTradeB().finally(() => {
+                  // Clear mutex after trade completes (success or error)
+                  setTimeout(() => setIsTrading(false), 2000); // 2s buffer for position settlement
+                });
               } else {
                 logger.info('Trade Tab', 'Monitor B: Manual confirmation required', {
                   gapB,
