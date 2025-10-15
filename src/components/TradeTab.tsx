@@ -356,10 +356,19 @@ export function TradeTab(props: TradeTabProps) {
                 setMonitorStatusA({ startTime: null, isMonitoring: true }); // Keep monitoring active
                 setIsTrading(true); // Set mutex
                 lastTradeTimeRef.current = now; // Update last trade time
-                handleManualTradeA().finally(() => {
-                  // Clear mutex after trade completes (success or error)
-                  setTimeout(() => setIsTrading(false), 2000); // 2s buffer for position settlement
-                });
+
+                // Execute trade and clear mutex after completion
+                handleManualTradeA()
+                  .catch((error) => {
+                    logger.error('Trade Tab', 'Auto-execution failed (Monitor A)', { error });
+                  })
+                  .finally(() => {
+                    // Clear mutex after trade completes (success or error) + 2s buffer
+                    setTimeout(() => {
+                      setIsTrading(false);
+                      logger.info('Trade Tab', 'Trading mutex cleared (Monitor A)');
+                    }, 2000);
+                  });
               } else {
                 logger.info('Trade Tab', 'Monitor A: Manual confirmation required', {
                   gapA,
@@ -452,10 +461,19 @@ export function TradeTab(props: TradeTabProps) {
                 setMonitorStatusB({ startTime: null, isMonitoring: true }); // Keep monitoring active
                 setIsTrading(true); // Set mutex
                 lastTradeTimeRef.current = now; // Update last trade time
-                handleManualTradeB().finally(() => {
-                  // Clear mutex after trade completes (success or error)
-                  setTimeout(() => setIsTrading(false), 2000); // 2s buffer for position settlement
-                });
+
+                // Execute trade and clear mutex after completion
+                handleManualTradeB()
+                  .catch((error) => {
+                    logger.error('Trade Tab', 'Auto-execution failed (Monitor B)', { error });
+                  })
+                  .finally(() => {
+                    // Clear mutex after trade completes (success or error) + 2s buffer
+                    setTimeout(() => {
+                      setIsTrading(false);
+                      logger.info('Trade Tab', 'Trading mutex cleared (Monitor B)');
+                    }, 2000);
+                  });
               } else {
                 logger.info('Trade Tab', 'Monitor B: Manual confirmation required', {
                   gapB,
