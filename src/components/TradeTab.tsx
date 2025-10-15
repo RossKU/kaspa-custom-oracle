@@ -109,6 +109,10 @@ export function TradeTab(props: TradeTabProps) {
   // Counter for consecutive detections of one-sided positions (片建て状態)
   const imbalanceCounterRef = useRef<number>(0);
 
+  // Liquidation timeout configuration (ms)
+  const [liquidationTimeout, setLiquidationTimeout] = useState(10000); // Default: 10 seconds
+  const imbalanceDetectedTimeRef = useRef<number | null>(null);
+
   // Position fetch completion flag (prevents race condition on browser reload)
   const [positionsFetched, setPositionsFetched] = useState(false);
 
@@ -774,38 +778,49 @@ export function TradeTab(props: TradeTabProps) {
 
         if (hasImbalance) {
           // One-sided position detected (片建て状態)
-          imbalanceCounterRef.current++;
-
-          if (imbalanceCounterRef.current === 1) {
-            logger.warn('Trade Tab', '⚠️ Position imbalance detected (5s)', {
+          // Record the first detection time
+          if (imbalanceDetectedTimeRef.current === null) {
+            imbalanceDetectedTimeRef.current = Date.now();
+            imbalanceCounterRef.current = 1; // Keep counter for backward compatibility
+            logger.warn('Trade Tab', '⚠️ Position imbalance detected', {
               bybitPosition: bybitPosition?.side || 'NONE',
               bingxPositionSide: bingxPositionSide || 'NONE',
               bingxAmount: bingxAmt,
               positionCountMatch,
-              counter: imbalanceCounterRef.current
+              liquidationTimeout: liquidationTimeout
             });
           }
 
-          if (imbalanceCounterRef.current >= 2) {
-            // 10+ seconds of imbalance - trigger emergency close
-            logger.error('Trade Tab', '🚨 LIQUIDATION DETECTED (10s+)', {
+          // Calculate elapsed time since first detection
+          const elapsedTime = Date.now() - imbalanceDetectedTimeRef.current;
+
+          if (elapsedTime >= liquidationTimeout) {
+            // Liquidation timeout exceeded - trigger emergency close
+            logger.error('Trade Tab', '🚨 LIQUIDATION DETECTED (timeout exceeded)', {
               bybitPosition: bybitPosition?.side || 'NONE',
               bingxPositionSide: bingxPositionSide || 'NONE',
               bingxAmount: bingxAmt,
               positionCountMatch,
-              counter: imbalanceCounterRef.current,
+              elapsedTime: elapsedTime,
+              liquidationTimeout: liquidationTimeout,
               action: 'Triggering emergency close'
             });
 
             // Execute emergency close
             handleEmergencyCloseAll();
+
+            // Reset detection time after emergency close
+            imbalanceDetectedTimeRef.current = null;
+            imbalanceCounterRef.current = 0;
           }
         } else {
-          // Balanced or no positions - reset counter
-          if (imbalanceCounterRef.current > 0) {
+          // Balanced or no positions - reset timers
+          if (imbalanceDetectedTimeRef.current !== null) {
             logger.info('Trade Tab', '✅ Position balance restored', {
-              previousCounter: imbalanceCounterRef.current
+              previousElapsedTime: Date.now() - imbalanceDetectedTimeRef.current,
+              liquidationTimeout: liquidationTimeout
             });
+            imbalanceDetectedTimeRef.current = null;
             imbalanceCounterRef.current = 0;
           }
         }
@@ -1584,11 +1599,15 @@ export function TradeTab(props: TradeTabProps) {
 
           <div style={{ display: 'grid', gridTemplateColumns: '120px 100px 60px', gap: '10px', alignItems: 'center', marginBottom: '8px' }}>
             <label>タイムアウト:</label>
-            <select style={{ padding: '4px', border: '1px solid #ccc' }}>
-              <option>1000</option>
-              <option>3000</option>
-              <option selected>5000</option>
-              <option>10000</option>
+            <select
+              value={liquidationTimeout}
+              onChange={(e) => setLiquidationTimeout(parseInt(e.target.value))}
+              style={{ padding: '4px', border: '1px solid #ccc' }}
+            >
+              <option value="1000">1000</option>
+              <option value="3000">3000</option>
+              <option value="5000">5000</option>
+              <option value="10000">10000</option>
             </select>
             <span>ms</span>
           </div>
