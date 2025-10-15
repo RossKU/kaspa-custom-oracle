@@ -330,7 +330,7 @@ export function TradeTab(props: TradeTabProps) {
                   duration: elapsed
                 });
                 timerRefA.current = null;
-                setMonitorStatusA({ startTime: null, isMonitoring: false });
+                setMonitorStatusA({ startTime: null, isMonitoring: true }); // Keep monitoring active
                 handleManualTradeA();
               } else {
                 logger.info('Trade Tab', 'Monitor A: Manual confirmation required', {
@@ -403,7 +403,7 @@ export function TradeTab(props: TradeTabProps) {
                   duration: elapsed
                 });
                 timerRefB.current = null;
-                setMonitorStatusB({ startTime: null, isMonitoring: false });
+                setMonitorStatusB({ startTime: null, isMonitoring: true }); // Keep monitoring active
                 handleManualTradeB();
               } else {
                 logger.info('Trade Tab', 'Monitor B: Manual confirmation required', {
