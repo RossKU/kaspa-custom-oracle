@@ -383,15 +383,16 @@ export function TradeTab(props: TradeTabProps) {
           thresholdType: isClosing ? 'OUT (closing)' : 'IN (opening)',
           positionState: posState,
           startTime: timerRefA.current,
-          isAboveThreshold: gapA >= threshold
+          isAboveThreshold: gapA_adjusted >= threshold
         });
 
-        if (gapA >= threshold) {
+        if (gapA_adjusted >= threshold) {
           // Above threshold - start or continue monitoring
           if (timerRefA.current === null) {
             timerRefA.current = now;
             logger.info('Trade Tab', 'Monitor A: Gap above threshold, starting timer', {
-              gapA,
+              gapA_raw: gapA,
+              gapA_adjusted: gapA_adjusted.toFixed(3),
               threshold: threshold,
               thresholdType: isClosing ? 'OUT (closing)' : 'IN (opening)'
             });
@@ -401,14 +402,16 @@ export function TradeTab(props: TradeTabProps) {
             logger.debug('Trade Tab', 'Monitor A: Tracking duration', {
               elapsed,
               required: triggerA.duration,
-              gapA
+              gapA_raw: gapA,
+              gapA_adjusted: gapA_adjusted.toFixed(3)
             });
 
             if (elapsed >= triggerA.duration) {
               logger.info('Trade Tab', 'Monitor A: Threshold held for required duration!', {
                 elapsed,
                 duration: triggerA.duration,
-                gapA,
+                gapA_raw: gapA,
+                gapA_adjusted: gapA_adjusted.toFixed(3),
                 threshold: threshold,
                 thresholdType: isClosing ? 'OUT (closing)' : 'IN (opening)',
                 autoEnabled: triggerA.enabled
@@ -495,14 +498,15 @@ export function TradeTab(props: TradeTabProps) {
           thresholdType: isClosing ? 'OUT (closing)' : 'IN (opening)',
           positionState: posState,
           startTime: timerRefB.current,
-          isAboveThreshold: gapB >= threshold
+          isAboveThreshold: gapB_adjusted >= threshold
         });
 
-        if (gapB >= threshold) {
+        if (gapB_adjusted >= threshold) {
           if (timerRefB.current === null) {
             timerRefB.current = now;
             logger.info('Trade Tab', 'Monitor B: Gap above threshold, starting timer', {
-              gapB,
+              gapB_raw: gapB,
+              gapB_adjusted: gapB_adjusted.toFixed(3),
               threshold: threshold,
               thresholdType: isClosing ? 'OUT (closing)' : 'IN (opening)'
             });
@@ -512,14 +516,16 @@ export function TradeTab(props: TradeTabProps) {
             logger.debug('Trade Tab', 'Monitor B: Tracking duration', {
               elapsed,
               required: triggerB.duration,
-              gapB
+              gapB_raw: gapB,
+              gapB_adjusted: gapB_adjusted.toFixed(3)
             });
 
             if (elapsed >= triggerB.duration) {
               logger.info('Trade Tab', 'Monitor B: Threshold held for required duration!', {
                 elapsed,
                 duration: triggerB.duration,
-                gapB,
+                gapB_raw: gapB,
+                gapB_adjusted: gapB_adjusted.toFixed(3),
                 threshold: threshold,
                 thresholdType: isClosing ? 'OUT (closing)' : 'IN (opening)',
                 autoEnabled: triggerB.enabled
