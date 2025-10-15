@@ -30,7 +30,7 @@ type GapHistory = {
   timestamp: number;
   gapA: number;
   gapB: number;
-  midpoint: number;  // (gapA + gapB) / 2
+  offset: number;  // (gapA - gapB) / 2
 };
 
 export function TradeTab(props: TradeTabProps) {
@@ -227,12 +227,19 @@ export function TradeTab(props: TradeTabProps) {
   };
 
   // Get adjusted gap with offset correction (30-minute moving average)
-  const getAdjustedGap = (rawGap: string): number => {
+  // isGapA: true for gapA (subtract offset), false for gapB (add offset)
+  const getAdjustedGap = (rawGap: string, isGapA: boolean): number => {
     const raw = parseFloat(rawGap);
     if (isNaN(raw)) return 0;
 
-    // Apply offset correction (subtract moving average midpoint)
-    return raw - offsetMovingAvg;
+    // Apply offset correction
+    // gapA: subtract offset to move towards center
+    // gapB: add offset to move towards center
+    if (isGapA) {
+      return raw - offsetMovingAvg;  // gapA - offset
+    } else {
+      return raw + offsetMovingAvg;  // gapB + offset
+    }
   };
 
   // Calculate gaps for both directions with proper Bid/Ask
@@ -243,10 +250,10 @@ export function TradeTab(props: TradeTabProps) {
 
   // Display gaps (with optional offset correction)
   const displayGapA = useOffsetCorrection && gapHistory.length > 0
-    ? getAdjustedGap(gapABuyBSell).toFixed(3)
+    ? getAdjustedGap(gapABuyBSell, true).toFixed(3)   // true = isGapA
     : gapABuyBSell;
   const displayGapB = useOffsetCorrection && gapHistory.length > 0
-    ? getAdjustedGap(gapBBuyASell).toFixed(3)
+    ? getAdjustedGap(gapBBuyASell, false).toFixed(3)  // false = isGapB
     : gapBBuyASell;
 
   // Get current position state (for auto-trading)
@@ -304,15 +311,15 @@ export function TradeTab(props: TradeTabProps) {
     }
   }, [monitorStatusA.isMonitoring, monitorStatusB.isMonitoring, pollingMode, authState.isAuthenticated]);
 
-  // Calculate moving average of gap midpoint offset (30-minute window)
+  // Calculate moving average of gap offset (30-minute window)
   useEffect(() => {
     if (gapHistory.length === 0) {
       setOffsetMovingAvg(0);
       return;
     }
 
-    // Calculate average of all midpoints in the 30-minute window
-    const sum = gapHistory.reduce((acc, h) => acc + h.midpoint, 0);
+    // Calculate average of all offsets in the 30-minute window
+    const sum = gapHistory.reduce((acc, h) => acc + h.offset, 0);
     const avg = sum / gapHistory.length;
 
     setOffsetMovingAvg(avg);
@@ -356,7 +363,8 @@ export function TradeTab(props: TradeTabProps) {
       // Gap history sampling for offset correction (1 second interval)
       if (now - lastSampleTimeRef.current >= HISTORY_SAMPLE_INTERVAL) {
         if (!isNaN(gapA) && !isNaN(gapB)) {
-          const midpoint = (gapA + gapB) / 2;
+          const offset = (gapA - gapB) / 2;  // Correct formula: (gapA - gapB) / 2
+          const midpoint = (gapA + gapB) / 2;  // For reference only
 
           // Detailed debug log for gap calculation verification (1 sample/second - safe)
           logger.debug('Trade Tab', 'Gap history sample added', {
@@ -381,7 +389,10 @@ export function TradeTab(props: TradeTabProps) {
               ? `(${exchangeAData.bid.toFixed(6)} - ${exchangeBData.ask.toFixed(6)}) / ${exchangeBData.ask.toFixed(6)} * 100`
               : 'N/A',
             gapB_raw: gapB.toFixed(4),
-            // Midpoint calculation
+            // Offset calculation (CORRECT)
+            offset: offset.toFixed(4),
+            offset_formula: `(${gapA.toFixed(4)} - ${gapB.toFixed(4)}) / 2 = ${offset.toFixed(4)}`,
+            // Midpoint (for reference)
             midpoint: midpoint.toFixed(4),
             midpoint_formula: `(${gapA.toFixed(4)} + ${gapB.toFixed(4)}) / 2 = ${midpoint.toFixed(4)}`
           });
@@ -392,7 +403,7 @@ export function TradeTab(props: TradeTabProps) {
               timestamp: now,
               gapA: gapA,
               gapB: gapB,
-              midpoint: midpoint
+              offset: offset  // Changed from midpoint to offset
             }];
 
             // Remove samples older than 30 minutes
@@ -409,7 +420,7 @@ export function TradeTab(props: TradeTabProps) {
         // Use OUT threshold when closing position, IN threshold when opening
         const isClosing = (posState === 'B_POSITION');
         const threshold = isClosing ? triggerA.outThreshold : triggerA.inThreshold;
-        const gapA_adjusted = getAdjustedGap(gapABuyBSell);
+        const gapA_adjusted = getAdjustedGap(gapABuyBSell, true);  // true = isGapA
 
         // Use adjusted gap if correction is enabled, otherwise use raw gap
         const gapForJudgmentA = useOffsetCorrection && gapHistory.length > 0
@@ -531,7 +542,7 @@ export function TradeTab(props: TradeTabProps) {
         // Use OUT threshold when closing position, IN threshold when opening
         const isClosing = (posState === 'A_POSITION');
         const threshold = isClosing ? triggerB.outThreshold : triggerB.inThreshold;
-        const gapB_adjusted = getAdjustedGap(gapBBuyASell);
+        const gapB_adjusted = getAdjustedGap(gapBBuyASell, false);  // false = isGapB
 
         // Use adjusted gap if correction is enabled, otherwise use raw gap
         const gapForJudgmentB = useOffsetCorrection && gapHistory.length > 0
