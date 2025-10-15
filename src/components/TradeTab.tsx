@@ -124,6 +124,7 @@ export function TradeTab(props: TradeTabProps) {
   // Gap offset correction (30-minute moving average)
   const [gapHistory, setGapHistory] = useState<GapHistory[]>([]);
   const [offsetMovingAvg, setOffsetMovingAvg] = useState<number>(0);
+  const [useOffsetCorrection, setUseOffsetCorrection] = useState(true); // Default: ON
   const lastSampleTimeRef = useRef<number>(0);
   const HISTORY_WINDOW = 30 * 60 * 1000; // 30 minutes (milliseconds)
   const HISTORY_SAMPLE_INTERVAL = 1000;   // 1 second sampling
@@ -239,6 +240,14 @@ export function TradeTab(props: TradeTabProps) {
   const exchangeBData = getExchangeData(exchangeB);
   const gapABuyBSell = calculateArbitrageGap(exchangeAData, exchangeBData); // A買いB売り (A ask → B bid)
   const gapBBuyASell = calculateArbitrageGap(exchangeBData, exchangeAData); // B買いA売り (B ask → A bid)
+
+  // Display gaps (with optional offset correction)
+  const displayGapA = useOffsetCorrection && gapHistory.length > 0
+    ? getAdjustedGap(gapABuyBSell).toFixed(3)
+    : gapABuyBSell;
+  const displayGapB = useOffsetCorrection && gapHistory.length > 0
+    ? getAdjustedGap(gapBBuyASell).toFixed(3)
+    : gapBBuyASell;
 
   // Get current position state (for auto-trading)
   const positionState = getPositionState();
@@ -374,19 +383,26 @@ export function TradeTab(props: TradeTabProps) {
         const threshold = isClosing ? triggerA.outThreshold : triggerA.inThreshold;
         const gapA_adjusted = getAdjustedGap(gapABuyBSell);
 
+        // Use adjusted gap if correction is enabled, otherwise use raw gap
+        const gapForJudgmentA = useOffsetCorrection && gapHistory.length > 0
+          ? gapA_adjusted
+          : gapA;
+
         logger.debug('Trade Tab', 'Monitor A tick', {
           gapA_raw: gapA,
           gapA_adjusted: gapA_adjusted.toFixed(3),
+          gapForJudgment: gapForJudgmentA.toFixed(3),
+          useOffsetCorrection: useOffsetCorrection,
           offsetMovingAvg: offsetMovingAvg.toFixed(4),
           samples: gapHistory.length,
           threshold: threshold,
           thresholdType: isClosing ? 'OUT (closing)' : 'IN (opening)',
           positionState: posState,
           startTime: timerRefA.current,
-          isAboveThreshold: gapA_adjusted >= threshold
+          isAboveThreshold: gapForJudgmentA >= threshold
         });
 
-        if (gapA_adjusted >= threshold) {
+        if (gapForJudgmentA >= threshold) {
           // Above threshold - start or continue monitoring
           if (timerRefA.current === null) {
             timerRefA.current = now;
@@ -489,19 +505,26 @@ export function TradeTab(props: TradeTabProps) {
         const threshold = isClosing ? triggerB.outThreshold : triggerB.inThreshold;
         const gapB_adjusted = getAdjustedGap(gapBBuyASell);
 
+        // Use adjusted gap if correction is enabled, otherwise use raw gap
+        const gapForJudgmentB = useOffsetCorrection && gapHistory.length > 0
+          ? gapB_adjusted
+          : gapB;
+
         logger.debug('Trade Tab', 'Monitor B tick', {
           gapB_raw: gapB,
           gapB_adjusted: gapB_adjusted.toFixed(3),
+          gapForJudgment: gapForJudgmentB.toFixed(3),
+          useOffsetCorrection: useOffsetCorrection,
           offsetMovingAvg: offsetMovingAvg.toFixed(4),
           samples: gapHistory.length,
           threshold: threshold,
           thresholdType: isClosing ? 'OUT (closing)' : 'IN (opening)',
           positionState: posState,
           startTime: timerRefB.current,
-          isAboveThreshold: gapB_adjusted >= threshold
+          isAboveThreshold: gapForJudgmentB >= threshold
         });
 
-        if (gapB_adjusted >= threshold) {
+        if (gapForJudgmentB >= threshold) {
           if (timerRefB.current === null) {
             timerRefB.current = now;
             logger.info('Trade Tab', 'Monitor B: Gap above threshold, starting timer', {
@@ -1679,6 +1702,23 @@ export function TradeTab(props: TradeTabProps) {
           </label>
         </div>
 
+        {/* Gap Offset Correction */}
+        <div style={{ marginBottom: '20px' }}>
+          <label style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+            <input
+              type="checkbox"
+              checked={useOffsetCorrection}
+              onChange={(e) => setUseOffsetCorrection(e.target.checked)}
+            />
+            <span>GAP補正を使用（30分移動平均）</span>
+          </label>
+          {useOffsetCorrection && gapHistory.length > 0 && (
+            <div style={{ fontSize: '11px', color: '#666', marginLeft: '20px', marginTop: '4px' }}>
+              オフセット: {offsetMovingAvg.toFixed(4)}% | サンプル数: {gapHistory.length}
+            </div>
+          )}
+        </div>
+
         {/* Comparison Settings */}
         <div style={{ marginBottom: '20px' }}>
           <div style={{ display: 'grid', gridTemplateColumns: '120px 150px', gap: '10px', alignItems: 'center', marginBottom: '8px' }}>
@@ -1731,13 +1771,13 @@ export function TradeTab(props: TradeTabProps) {
               <span>% OUT</span>
               <input
                 type="text"
-                value={gapABuyBSell}
+                value={displayGapA}
                 readOnly
                 style={{
                   width: '60px',
                   padding: '4px',
                   border: '1px solid #ccc',
-                  color: parseFloat(gapABuyBSell) < 0 ? '#dc3545' : parseFloat(gapABuyBSell) > 0 ? '#28a745' : '#666',
+                  color: parseFloat(displayGapA) < 0 ? '#dc3545' : parseFloat(displayGapA) > 0 ? '#28a745' : '#666',
                   fontWeight: '600'
                 }}
               />
@@ -1817,13 +1857,13 @@ export function TradeTab(props: TradeTabProps) {
               <span>% OUT</span>
               <input
                 type="text"
-                value={gapBBuyASell}
+                value={displayGapB}
                 readOnly
                 style={{
                   width: '60px',
                   padding: '4px',
                   border: '1px solid #ccc',
-                  color: parseFloat(gapBBuyASell) < 0 ? '#dc3545' : parseFloat(gapBBuyASell) > 0 ? '#28a745' : '#666',
+                  color: parseFloat(displayGapB) < 0 ? '#dc3545' : parseFloat(displayGapB) > 0 ? '#28a745' : '#666',
                   fontWeight: '600'
                 }}
               />
