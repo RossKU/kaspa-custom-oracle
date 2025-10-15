@@ -128,7 +128,7 @@ export function TradeTab(props: TradeTabProps) {
   const [useOffsetCorrection, setUseOffsetCorrection] = useState(true); // Default: ON
   const lastSampleTimeRef = useRef<number>(0);
   const HISTORY_WINDOW = 30 * 60 * 1000; // 30 minutes (milliseconds)
-  const HISTORY_SAMPLE_INTERVAL = 1000;   // 1 second sampling
+  const HISTORY_SAMPLE_INTERVAL = 3000;   // 3 second sampling (reduced load)
 
   // Position fetch completion flag (prevents race condition on browser reload)
   const [positionsFetched, setPositionsFetched] = useState(false);

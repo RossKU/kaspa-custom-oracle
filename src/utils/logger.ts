@@ -10,7 +10,7 @@ interface LogEntry {
 
 class DebugLogger {
   private logs: LogEntry[] = [];
-  private maxLogs = 500; // Keep last 500 logs
+  private maxLogAge = 10 * 60 * 1000; // Keep last 10 minutes (milliseconds)
   private listeners: ((logs: LogEntry[]) => void)[] = [];
 
   log(source: string, message: string, data?: any, level: 'info' | 'warn' | 'error' | 'debug' = 'info') {
@@ -24,10 +24,12 @@ class DebugLogger {
 
     this.logs.push(entry);
 
-    // Keep only last maxLogs entries
-    if (this.logs.length > this.maxLogs) {
-      this.logs = this.logs.slice(-this.maxLogs);
-    }
+    // Remove logs older than 10 minutes
+    const cutoffTime = Date.now() - this.maxLogAge;
+    this.logs = this.logs.filter(log => {
+      const logTime = new Date(log.timestamp).getTime();
+      return logTime >= cutoffTime;
+    });
 
     // Also log to console
     const consoleMsg = `[${source}] ${message}`;
