@@ -25,6 +25,14 @@ interface TradeTabProps {
 // Polling mode for adaptive API request management
 type PollingMode = 'IDLE' | 'MONITORING' | 'TRADING';
 
+// Gap history for offset correction (30-minute moving average)
+type GapHistory = {
+  timestamp: number;
+  gapA: number;
+  gapB: number;
+  midpoint: number;  // (gapA + gapB) / 2
+};
+
 export function TradeTab(props: TradeTabProps) {
   const [authState, setAuthState] = useState<TradeAuthState>({
     isAuthenticated: false,
@@ -112,6 +120,13 @@ export function TradeTab(props: TradeTabProps) {
   // Liquidation timeout configuration (ms)
   const [liquidationTimeout, setLiquidationTimeout] = useState(10000); // Default: 10 seconds
   const imbalanceDetectedTimeRef = useRef<number | null>(null);
+
+  // Gap offset correction (30-minute moving average)
+  const [gapHistory, setGapHistory] = useState<GapHistory[]>([]);
+  const [offsetMovingAvg, setOffsetMovingAvg] = useState<number>(0);
+  const lastSampleTimeRef = useRef<number>(0);
+  const HISTORY_WINDOW = 30 * 60 * 1000; // 30 minutes (milliseconds)
+  const HISTORY_SAMPLE_INTERVAL = 1000;   // 1 second sampling
 
   // Position fetch completion flag (prevents race condition on browser reload)
   const [positionsFetched, setPositionsFetched] = useState(false);
@@ -210,6 +225,15 @@ export function TradeTab(props: TradeTabProps) {
     return gap.toFixed(3);
   };
 
+  // Get adjusted gap with offset correction (30-minute moving average)
+  const getAdjustedGap = (rawGap: string): number => {
+    const raw = parseFloat(rawGap);
+    if (isNaN(raw)) return 0;
+
+    // Apply offset correction (subtract moving average midpoint)
+    return raw - offsetMovingAvg;
+  };
+
   // Calculate gaps for both directions with proper Bid/Ask
   const exchangeAData = getExchangeData(exchangeA);
   const exchangeBData = getExchangeData(exchangeB);
@@ -271,6 +295,26 @@ export function TradeTab(props: TradeTabProps) {
     }
   }, [monitorStatusA.isMonitoring, monitorStatusB.isMonitoring, pollingMode, authState.isAuthenticated]);
 
+  // Calculate moving average of gap midpoint offset (30-minute window)
+  useEffect(() => {
+    if (gapHistory.length === 0) {
+      setOffsetMovingAvg(0);
+      return;
+    }
+
+    // Calculate average of all midpoints in the 30-minute window
+    const sum = gapHistory.reduce((acc, h) => acc + h.midpoint, 0);
+    const avg = sum / gapHistory.length;
+
+    setOffsetMovingAvg(avg);
+
+    logger.debug('Trade Tab', 'Offset moving average updated', {
+      samples: gapHistory.length,
+      windowMinutes: (HISTORY_WINDOW / 60000).toFixed(1),
+      offsetMovingAvg: avg.toFixed(4)
+    });
+  }, [gapHistory, HISTORY_WINDOW]);
+
   // Notify App.tsx of monitoring state changes (for WebSocket management)
   useEffect(() => {
     if (!authState.isAuthenticated) return;
@@ -300,14 +344,41 @@ export function TradeTab(props: TradeTabProps) {
       const posState = getPositionState();
       const now = Date.now();
 
+      // Gap history sampling for offset correction (1 second interval)
+      if (now - lastSampleTimeRef.current >= HISTORY_SAMPLE_INTERVAL) {
+        if (!isNaN(gapA) && !isNaN(gapB)) {
+          const midpoint = (gapA + gapB) / 2;
+
+          setGapHistory(prev => {
+            // Add new sample
+            const newHistory = [...prev, {
+              timestamp: now,
+              gapA: gapA,
+              gapB: gapB,
+              midpoint: midpoint
+            }];
+
+            // Remove samples older than 30 minutes
+            const cutoff = now - HISTORY_WINDOW;
+            return newHistory.filter(h => h.timestamp >= cutoff);
+          });
+
+          lastSampleTimeRef.current = now;
+        }
+      }
+
       // A direction monitoring (A買いB売り)
       if (monitorStatusA.isMonitoring && posState !== 'A_POSITION') {
         // Use OUT threshold when closing position, IN threshold when opening
         const isClosing = (posState === 'B_POSITION');
         const threshold = isClosing ? triggerA.outThreshold : triggerA.inThreshold;
+        const gapA_adjusted = getAdjustedGap(gapABuyBSell);
 
         logger.debug('Trade Tab', 'Monitor A tick', {
-          gapA,
+          gapA_raw: gapA,
+          gapA_adjusted: gapA_adjusted.toFixed(3),
+          offsetMovingAvg: offsetMovingAvg.toFixed(4),
+          samples: gapHistory.length,
           threshold: threshold,
           thresholdType: isClosing ? 'OUT (closing)' : 'IN (opening)',
           positionState: posState,
@@ -413,9 +484,13 @@ export function TradeTab(props: TradeTabProps) {
         // Use OUT threshold when closing position, IN threshold when opening
         const isClosing = (posState === 'A_POSITION');
         const threshold = isClosing ? triggerB.outThreshold : triggerB.inThreshold;
+        const gapB_adjusted = getAdjustedGap(gapBBuyASell);
 
         logger.debug('Trade Tab', 'Monitor B tick', {
-          gapB,
+          gapB_raw: gapB,
+          gapB_adjusted: gapB_adjusted.toFixed(3),
+          offsetMovingAvg: offsetMovingAvg.toFixed(4),
+          samples: gapHistory.length,
           threshold: threshold,
           thresholdType: isClosing ? 'OUT (closing)' : 'IN (opening)',
           positionState: posState,
