@@ -2200,7 +2200,7 @@ export function TradeTab(props: TradeTabProps) {
               {positions.map((position: any, index: number) => {
                 const amt = parseFloat(position.positionAmt || position.availableAmt || '0');
                 const positionSide = position.positionSide; // Use API's positionSide field directly
-                const unrealizedProfit = parseFloat(position.unrealisedProfit || position.unRealizedProfit || '0');
+                const unrealizedProfit = parseFloat(position.unrealizedProfit || position.unrealisedProfit || position.unRealizedProfit || '0');
 
                 return (
                   <div
