@@ -92,5 +92,5 @@ export interface TradeAuthState {
 // Change this in production or implement proper authentication
 export const TRADE_PASSWORD = 'KAS2025Arb';
 
-// Session timeout (1 hour)
-export const SESSION_TIMEOUT = 3600000;
+// Session timeout (unlimited for 24/7 automated trading)
+export const SESSION_TIMEOUT = Infinity;
