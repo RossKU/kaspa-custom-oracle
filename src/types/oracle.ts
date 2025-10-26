@@ -131,3 +131,37 @@ export function cleanupOldTrades(
     trades.splice(0, removeCount);
   }
 }
+
+/**
+ * VWAP (Volume Weighted Average Price) を計算
+ *
+ * Chainlink方式: VWAP = Σ(price_i × volume_i) / Σ(volume_i)
+ *
+ * @param trades 取引データ配列
+ * @param minTrades 最低取引数（デフォルト: 3）
+ * @returns VWAP価格、または取引データ不足の場合null
+ */
+export function calculateVWAP(
+  trades: MarketTrade[],
+  minTrades: number = 3
+): number | null {
+  // 取引データが不足している場合
+  if (!trades || trades.length < minTrades) {
+    return null;
+  }
+
+  let totalValue = 0;  // Σ(price × volume)
+  let totalVolume = 0; // Σ(volume)
+
+  for (const trade of trades) {
+    totalValue += trade.price * trade.volume;
+    totalVolume += trade.volume;
+  }
+
+  // 出来高がゼロの場合
+  if (totalVolume === 0) {
+    return null;
+  }
+
+  return totalValue / totalVolume;
+}

@@ -46,12 +46,10 @@ export class BybitPriceMonitor {
     this.onDataCallback = onData;
     this.onErrorCallback = onError;
 
-    console.log('[Bybit] Connecting to', BYBIT_WS_URL);
 
     this.ws = new WebSocket(BYBIT_WS_URL);
 
     this.ws.onopen = () => {
-      console.log('[Bybit] ✅ Connected!');
 
       // Subscribe to KASUSDT ticker and trades
       this.subscribeTicker();
@@ -66,7 +64,6 @@ export class BybitPriceMonitor {
     this.ws.onmessage = (event) => {
       try {
         const message = JSON.parse(event.data);
-        console.log('[Bybit] Received:', message);
 
         // Handle pong response
         if (message.op === 'pong') {
@@ -83,18 +80,15 @@ export class BybitPriceMonitor {
           this.handleTradeData(message.data);
         }
       } catch (error) {
-        console.error('[Bybit] Parse error:', error);
         this.onErrorCallback?.('Failed to parse Bybit data');
       }
     };
 
     this.ws.onerror = (error) => {
-      console.error('[Bybit] ❌ Error:', error);
       this.onErrorCallback?.('Bybit WebSocket error');
     };
 
     this.ws.onclose = () => {
-      console.log('[Bybit] Connection closed');
       if (this.pingInterval) {
         clearInterval(this.pingInterval);
         this.pingInterval = null;
@@ -103,7 +97,6 @@ export class BybitPriceMonitor {
       // Auto-reconnect after 5 seconds
       setTimeout(() => {
         if (this.onDataCallback && this.onErrorCallback) {
-          console.log('[Bybit] Reconnecting...');
           this.connect(this.onDataCallback, this.onErrorCallback);
         }
       }, 5000);
@@ -116,7 +109,6 @@ export class BybitPriceMonitor {
       args: ['tickers.KASUSDT']
     };
 
-    console.log('[Bybit] Subscribing to ticker:', subscribeMessage);
     this.ws?.send(JSON.stringify(subscribeMessage));
   }
 
@@ -126,7 +118,6 @@ export class BybitPriceMonitor {
       args: ['publicTrade.KASUSDT']
     };
 
-    console.log('[Bybit] Subscribing to trades:', subscribeMessage);
     this.ws?.send(JSON.stringify(subscribeMessage));
   }
 
@@ -154,7 +145,6 @@ export class BybitPriceMonitor {
     // Store for next delta update
     this.lastPriceData = priceData;
 
-    console.log('[Bybit] Parsed price data:', priceData);
     this.onDataCallback?.(priceData);
   }
 
@@ -174,7 +164,6 @@ export class BybitPriceMonitor {
     // 古いデータをクリーンアップ
     cleanupOldTrades(this.trades, TRADE_WINDOW_MS);
 
-    console.log('[Bybit] Trades updated, count:', this.trades.length);
   }
 
   disconnect() {

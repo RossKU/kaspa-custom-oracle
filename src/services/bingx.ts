@@ -200,7 +200,6 @@ export class BingXPriceMonitor {
     // 古いデータをクリーンアップ
     cleanupOldTrades(this.trades, TRADE_WINDOW_MS);
 
-    console.log('[BingX] Trades updated, count:', this.trades.length);
   }
 
   disconnect() {

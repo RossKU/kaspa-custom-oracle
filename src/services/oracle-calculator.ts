@@ -1,7 +1,9 @@
 // Oracle Price Calculator
 // Implements Chainlink-style Median aggregation for KAS/USDT price
+// Uses VWAP (Volume Weighted Average Price) from each exchange
 
 import type { OracleResult, OracleConfig } from '../types/oracle';
+import { calculateVWAP } from '../types/oracle';
 import type { PriceData } from '../types/binance';
 import type { MexcPriceData } from './mexc';
 import type { BybitPriceData } from './bybit';
@@ -46,44 +48,50 @@ export function calculateOraclePrice(
   // 設定のマージ
   const cfg: Required<OracleConfig> = { ...DEFAULT_CONFIG, ...config };
 
-  // Step 1: 有効な価格データを収集
+  // Step 1: 有効なVWAP価格データを収集
   const now = Date.now();
   const prices: number[] = [];
   const exchanges: string[] = [];
 
-  // Binance
+  // Binance - VWAP計算、失敗時はlastPriceにフォールバック
   if (binanceData && binanceData.lastUpdate && (now - binanceData.lastUpdate) <= cfg.maxStalenessMs) {
-    prices.push(binanceData.price);
+    const vwap = calculateVWAP(binanceData.trades);
+    prices.push(vwap !== null ? vwap : binanceData.price);
     exchanges.push('Binance');
   }
 
-  // MEXC
+  // MEXC - VWAP計算、失敗時はlastPriceにフォールバック
   if (mexcData && mexcData.lastUpdate && (now - mexcData.lastUpdate) <= cfg.maxStalenessMs) {
-    prices.push(mexcData.price);
+    const vwap = calculateVWAP(mexcData.trades);
+    prices.push(vwap !== null ? vwap : mexcData.price);
     exchanges.push('MEXC');
   }
 
-  // Bybit
+  // Bybit - VWAP計算、失敗時はlastPriceにフォールバック
   if (bybitData && bybitData.lastUpdate && (now - bybitData.lastUpdate) <= cfg.maxStalenessMs) {
-    prices.push(bybitData.price);
+    const vwap = calculateVWAP(bybitData.trades);
+    prices.push(vwap !== null ? vwap : bybitData.price);
     exchanges.push('Bybit');
   }
 
-  // Gate.io
+  // Gate.io - VWAP計算、失敗時はmidPriceにフォールバック
   if (gateioData && gateioData.lastUpdate && (now - gateioData.lastUpdate) <= cfg.maxStalenessMs) {
-    prices.push(gateioData.price);
+    const vwap = calculateVWAP(gateioData.trades);
+    prices.push(vwap !== null ? vwap : gateioData.price);
     exchanges.push('Gate.io');
   }
 
-  // Kucoin
+  // Kucoin - VWAP計算、失敗時はmidPriceにフォールバック
   if (kucoinData && kucoinData.lastUpdate && (now - kucoinData.lastUpdate) <= cfg.maxStalenessMs) {
-    prices.push(kucoinData.price);
+    const vwap = calculateVWAP(kucoinData.trades);
+    prices.push(vwap !== null ? vwap : kucoinData.price);
     exchanges.push('Kucoin');
   }
 
-  // BingX
+  // BingX - VWAP計算、失敗時はlastPriceにフォールバック
   if (bingxData && bingxData.lastUpdate && (now - bingxData.lastUpdate) <= cfg.maxStalenessMs) {
-    prices.push(bingxData.price);
+    const vwap = calculateVWAP(bingxData.trades);
+    prices.push(vwap !== null ? vwap : bingxData.price);
     exchanges.push('BingX');
   }
 

@@ -124,12 +124,10 @@ export class KucoinPriceMonitor {
       };
 
       this.ws.onerror = (error) => {
-        console.error('[Kucoin] WebSocket error:', error);
         this.onErrorCallback?.('WebSocket connection error');
       };
 
       this.ws.onclose = () => {
-        console.log('[Kucoin] WebSocket closed');
         if (this.pingInterval) {
           clearInterval(this.pingInterval);
         }
@@ -142,7 +140,6 @@ export class KucoinPriceMonitor {
         }, 5000);
       };
     } catch (error) {
-      console.error('[Kucoin] Connection error:', error);
       this.onErrorCallback?.(`Failed to connect: ${error}`);
     }
   }

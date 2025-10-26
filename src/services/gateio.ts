@@ -48,12 +48,10 @@ export class GateioPriceMonitor {
     this.onDataCallback = onData;
     this.onErrorCallback = onError;
 
-    console.log('[Gate.io] Connecting to', GATEIO_WS_URL);
 
     this.ws = new WebSocket(GATEIO_WS_URL);
 
     this.ws.onopen = () => {
-      console.log('[Gate.io] ✅ Connected!');
 
       // Subscribe to KAS_USDT book_ticker and trades
       this.subscribeBookTicker();
@@ -68,7 +66,6 @@ export class GateioPriceMonitor {
     this.ws.onmessage = (event) => {
       try {
         const message = JSON.parse(event.data);
-        console.log('[Gate.io] Received:', message);
 
         // Handle book_ticker data
         if (message.channel === 'futures.book_ticker' && message.event === 'update' && message.result) {
@@ -80,18 +77,15 @@ export class GateioPriceMonitor {
           this.handleTradeData(message.result);
         }
       } catch (error) {
-        console.error('[Gate.io] Parse error:', error);
         this.onErrorCallback?.('Failed to parse Gate.io data');
       }
     };
 
     this.ws.onerror = (error) => {
-      console.error('[Gate.io] ❌ Error:', error);
       this.onErrorCallback?.('Gate.io WebSocket error');
     };
 
     this.ws.onclose = () => {
-      console.log('[Gate.io] Connection closed');
       if (this.pingInterval) {
         clearInterval(this.pingInterval);
         this.pingInterval = null;
@@ -100,7 +94,6 @@ export class GateioPriceMonitor {
       // Auto-reconnect after 5 seconds
       setTimeout(() => {
         if (this.onDataCallback && this.onErrorCallback) {
-          console.log('[Gate.io] Reconnecting...');
           this.connect(this.onDataCallback, this.onErrorCallback);
         }
       }, 5000);
@@ -115,7 +108,6 @@ export class GateioPriceMonitor {
       payload: ['KAS_USDT']
     };
 
-    console.log('[Gate.io] Subscribing to book_ticker:', subscribeMessage);
     this.ws?.send(JSON.stringify(subscribeMessage));
   }
 
@@ -127,7 +119,6 @@ export class GateioPriceMonitor {
       payload: ['KAS_USDT']
     };
 
-    console.log('[Gate.io] Subscribing to trades:', subscribeMessage);
     this.ws?.send(JSON.stringify(subscribeMessage));
   }
 
@@ -156,7 +147,6 @@ export class GateioPriceMonitor {
       trades: [...this.trades]
     };
 
-    console.log('[Gate.io] Parsed price data:', priceData);
     this.onDataCallback?.(priceData);
   }
 
@@ -175,7 +165,6 @@ export class GateioPriceMonitor {
     // 古いデータをクリーンアップ
     cleanupOldTrades(this.trades, TRADE_WINDOW_MS);
 
-    console.log('[Gate.io] Trades updated, count:', this.trades.length);
   }
 
   disconnect() {
