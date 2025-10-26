@@ -130,26 +130,24 @@ export function PriceTab({
           </div>
 
           <div className="oracle-details">
-            <div className="oracle-detail-item">
-              <span className="label">Layer 1:</span>
-              <span className="value formula">VWAP = Σ(price×volume) / Σ(volume)</span>
-            </div>
-
-            <div className="oracle-detail-item">
-              <span className="label">Layer 2:</span>
-              <span className="value">Median of {oracleResult.validSources} Exchange VWAPs</span>
-            </div>
-
-            <div className="oracle-detail-item">
-              <span className="label">Range:</span>
-              <span className="value">
-                ${oracleResult.lowestPrice.toFixed(7)} - ${oracleResult.highestPrice.toFixed(7)}
-                <span className="spread"> ({oracleResult.spreadPercent.toFixed(2)}%)</span>
+            <div className="oracle-detail-item full-width">
+              <span className="label">計算方法:</span>
+              <span className="value explanation">
+                各取引所で VWAP = Σ(価格×出来高) / Σ(出来高) を計算し、
+                {oracleResult.validSources}取引所のVWAPの中央値（Median）をOracle価格とする
               </span>
             </div>
 
             <div className="oracle-detail-item">
-              <span className="label">Updated:</span>
+              <span className="label">価格範囲:</span>
+              <span className="value">
+                ${oracleResult.lowestPrice.toFixed(7)} - ${oracleResult.highestPrice.toFixed(7)}
+                <span className="spread"> (差: {oracleResult.spreadPercent.toFixed(2)}%)</span>
+              </span>
+            </div>
+
+            <div className="oracle-detail-item">
+              <span className="label">更新:</span>
               <span className="value">{getTimeAgo(oracleResult.timestamp)}</span>
             </div>
           </div>

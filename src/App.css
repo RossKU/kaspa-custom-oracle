@@ -925,20 +925,26 @@
   margin-left: 0.25rem;
 }
 
-/* Formula Display */
-.value.formula {
-  font-family: 'Courier New', Consolas, 'Lucida Console', Monaco, monospace;
-  font-size: 0.9rem;
-  font-weight: 600;
-  color: #667eea;
-  background: rgba(102, 126, 234, 0.08);
-  padding: 0.25rem 0.5rem;
-  border-radius: 4px;
+/* Explanation Display */
+.oracle-detail-item.full-width {
+  grid-column: 1 / -1;
 }
 
-:root[data-theme="dark"] .value.formula {
-  color: #a8b5ff;
-  background: rgba(102, 126, 234, 0.15);
+.value.explanation {
+  font-size: 0.9rem;
+  line-height: 1.6;
+  color: var(--text-secondary);
+  background: rgba(102, 126, 234, 0.05);
+  padding: 0.75rem;
+  border-radius: 6px;
+  border-left: 3px solid #667eea;
+  display: block;
+  margin-top: 0.5rem;
+}
+
+:root[data-theme="dark"] .value.explanation {
+  background: rgba(102, 126, 234, 0.12);
+  border-left-color: #a8b5ff;
 }
 
 /* Responsive: Tablet */
