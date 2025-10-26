@@ -5,7 +5,7 @@ import type { BybitPriceData } from '../services/bybit';
 import type { GateioPriceData } from '../services/gateio';
 import type { KucoinPriceData } from '../services/kucoin';
 import type { BingXPriceData } from '../services/bingx';
-import { calculateOraclePrice, getTimeAgo, getConfidenceIcon } from '../services/oracle-calculator';
+import { calculateOraclePrice, getTimeAgo } from '../services/oracle-calculator';
 
 interface PriceTabProps {
   binanceData: PriceData | null;
@@ -131,15 +131,13 @@ export function PriceTab({
 
           <div className="oracle-details">
             <div className="oracle-detail-item">
-              <span className="label">Method:</span>
-              <span className="value">Median of {oracleResult.validSources} Exchanges</span>
+              <span className="label">Layer 1:</span>
+              <span className="value formula">VWAP = Σ(price×volume) / Σ(volume)</span>
             </div>
 
             <div className="oracle-detail-item">
-              <span className="label">Confidence:</span>
-              <span className={`confidence-badge confidence-${oracleResult.confidence.toLowerCase()}`}>
-                {getConfidenceIcon(oracleResult.confidence)} {oracleResult.confidence}
-              </span>
+              <span className="label">Layer 2:</span>
+              <span className="value">Median of {oracleResult.validSources} Exchange VWAPs</span>
             </div>
 
             <div className="oracle-detail-item">

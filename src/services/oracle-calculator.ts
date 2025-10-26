@@ -172,19 +172,3 @@ export function getTimeAgo(timestamp: number): string {
   return `${Math.floor(seconds / 3600)}h ago`;
 }
 
-/**
- * 信頼度に応じたアイコンを返す
- *
- * @param confidence 信頼度レベル
- * @returns アイコン文字列
- */
-export function getConfidenceIcon(confidence: 'HIGH' | 'MEDIUM' | 'LOW'): string {
-  switch (confidence) {
-    case 'HIGH':
-      return '🟢';
-    case 'MEDIUM':
-      return '🟡';
-    case 'LOW':
-      return '🔴';
-  }
-}
