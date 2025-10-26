@@ -1,6 +1,6 @@
 # Kaspa Custom Oracle
 
-A real-time cryptocurrency price oracle for KAS/USDT using Chainlink's VWAP-based methodology to aggregate data from 6 major exchanges.
+A real-time cryptocurrency price oracle for KAS/USDT
 
 🌐 **Live Demo**: [https://rossku.github.io/kaspa-custom-oracle/](https://rossku.github.io/kaspa-custom-oracle/)
 
@@ -26,11 +26,6 @@ A real-time cryptocurrency price oracle for KAS/USDT using Chainlink's VWAP-base
 | Gate.io  | Futures | `futures.trades` | Real-time |
 | Kucoin   | Futures | `/execution` | Real-time |
 | BingX    | Perpetual | `trade.detail` | Real-time |
-
-### Gap Detection & Arbitrage
-- Real-time price gap detection across exchanges
-- Profit percentage calculation (fees included)
-- Arbitrage opportunity alerts
 
 ---
 
@@ -68,38 +63,6 @@ A real-time cryptocurrency price oracle for KAS/USDT using Chainlink's VWAP-base
 - **Styling**: CSS3 with CSS Variables (Dark Mode support)
 - **WebSocket**: Native WebSocket API
 - **Deployment**: GitHub Pages (CI/CD via GitHub Actions)
-
----
-
-## 🚀 Getting Started
-
-### Prerequisites
-- Node.js 18+
-- npm or yarn
-
-### Installation
-
-```bash
-# Clone the repository
-git clone https://github.com/RossKU/kaspa-custom-oracle.git
-cd kaspa-custom-oracle
-
-# Install dependencies
-npm install
-
-# Start development server
-npm run dev
-```
-
-The app will be available at `http://localhost:5173`
-
-### Build for Production
-
-```bash
-npm run build
-```
-
-Output will be in the `dist/` directory.
 
 ---
 
@@ -167,18 +130,7 @@ src/
 
 - **Real-time Price Table**: Shows bid/ask/last price for all 6 exchanges
 - **Oracle Price Card**: Displays the calculated Oracle price with explanation
-- **Gap Detection**: Highlights arbitrage opportunities with profit percentages
 - **Dark Mode**: Full dark mode support with CSS variables
 - **Responsive Design**: Mobile, tablet, and desktop optimized
 
 ---
-
-## 📝 License
-
-MIT License
-
----
-
-## 🤖 Credits
-
-Generated with [Claude Code](https://claude.com/claude-code)
