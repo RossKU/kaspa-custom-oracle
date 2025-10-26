@@ -123,7 +123,7 @@ export class KucoinPriceMonitor {
         }
       };
 
-      this.ws.onerror = (error) => {
+      this.ws.onerror = () => {
         this.onErrorCallback?.('WebSocket connection error');
       };
 

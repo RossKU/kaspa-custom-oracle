@@ -74,7 +74,7 @@ export class MexcPriceMonitor {
       }
     };
 
-    this.ws.onerror = (error) => {
+    this.ws.onerror = () => {
       this.onErrorCallback?.('MEXC WebSocket error');
     };
 

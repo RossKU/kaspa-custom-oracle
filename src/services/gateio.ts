@@ -81,7 +81,7 @@ export class GateioPriceMonitor {
       }
     };
 
-    this.ws.onerror = (error) => {
+    this.ws.onerror = () => {
       this.onErrorCallback?.('Gate.io WebSocket error');
     };
 

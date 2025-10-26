@@ -84,7 +84,7 @@ export class BybitPriceMonitor {
       }
     };
 
-    this.ws.onerror = (error) => {
+    this.ws.onerror = () => {
       this.onErrorCallback?.('Bybit WebSocket error');
     };
 
