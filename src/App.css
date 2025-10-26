@@ -811,3 +811,209 @@
     width: 100%;
   }
 }
+
+/* ============================================
+   Oracle Price Card Styles (Chainlink Method)
+   ============================================ */
+
+.oracle-price-card {
+  margin-top: 2rem;
+  padding: 2rem;
+  background: linear-gradient(135deg,
+    rgba(102, 126, 234, 0.08) 0%,
+    rgba(118, 75, 162, 0.08) 100%
+  );
+  border: 2px solid #667eea;
+  border-radius: 12px;
+  box-shadow: 0 4px 12px var(--shadow);
+  transition: all 0.3s ease;
+}
+
+.oracle-price-card:hover {
+  box-shadow: 0 6px 16px var(--shadow);
+  transform: translateY(-2px);
+}
+
+:root[data-theme="dark"] .oracle-price-card {
+  background: linear-gradient(135deg,
+    rgba(102, 126, 234, 0.15) 0%,
+    rgba(118, 75, 162, 0.15) 100%
+  );
+  border-color: #8899ff;
+}
+
+/* Oracle Header */
+.oracle-header {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 1.5rem;
+  padding-bottom: 0.75rem;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.oracle-icon {
+  font-size: 1.5rem;
+}
+
+.oracle-title {
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: #667eea;
+  margin: 0;
+  letter-spacing: 0.5px;
+}
+
+.oracle-subtitle {
+  font-size: 0.85rem;
+  color: var(--text-tertiary);
+  font-weight: 400;
+}
+
+/* Oracle Price Display */
+.oracle-price-display {
+  font-size: 2.5rem;
+  font-weight: 700;
+  font-family: 'Courier New', Consolas, monospace;
+  color: #667eea;
+  text-align: center;
+  margin: 1.5rem 0;
+  padding-bottom: 1rem;
+  border-bottom: 3px solid rgba(102, 126, 234, 0.3);
+  letter-spacing: 1px;
+}
+
+.oracle-price-display .currency {
+  font-size: 1.2rem;
+  color: var(--text-secondary);
+  margin-left: 0.5rem;
+  font-weight: 500;
+}
+
+/* Oracle Details Grid */
+.oracle-details {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+  margin-top: 1.5rem;
+}
+
+.oracle-detail-item {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.75rem;
+  background: var(--bg-tertiary);
+  border-radius: 6px;
+  font-size: 0.9rem;
+}
+
+.oracle-detail-item .label {
+  font-weight: 600;
+  color: var(--text-secondary);
+  min-width: 90px;
+}
+
+.oracle-detail-item .value {
+  color: var(--text-primary);
+  font-family: 'Courier New', Consolas, monospace;
+}
+
+.oracle-detail-item .spread {
+  color: var(--text-tertiary);
+  font-size: 0.85rem;
+  margin-left: 0.25rem;
+}
+
+/* Confidence Badge */
+.confidence-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.35rem 0.75rem;
+  border-radius: 16px;
+  font-weight: 600;
+  font-size: 0.85rem;
+  letter-spacing: 0.5px;
+}
+
+.confidence-badge.confidence-high {
+  background: linear-gradient(90deg, #d4edda, #c3e6cb);
+  color: #155724;
+  border: 1px solid #c3e6cb;
+}
+
+.confidence-badge.confidence-medium {
+  background: linear-gradient(90deg, #fff3cd, #ffeeba);
+  color: #856404;
+  border: 1px solid #ffeeba;
+}
+
+.confidence-badge.confidence-low {
+  background: linear-gradient(90deg, #f8d7da, #f5c6cb);
+  color: #721c24;
+  border: 1px solid #f5c6cb;
+}
+
+/* Dark Mode Confidence Badges */
+:root[data-theme="dark"] .confidence-badge.confidence-high {
+  background: linear-gradient(90deg,
+    rgba(40, 167, 69, 0.3),
+    rgba(40, 167, 69, 0.2)
+  );
+  color: #7dff9e;
+}
+
+:root[data-theme="dark"] .confidence-badge.confidence-medium {
+  background: linear-gradient(90deg,
+    rgba(255, 193, 7, 0.3),
+    rgba(255, 193, 7, 0.2)
+  );
+  color: #ffd966;
+}
+
+:root[data-theme="dark"] .confidence-badge.confidence-low {
+  background: linear-gradient(90deg,
+    rgba(220, 53, 69, 0.3),
+    rgba(220, 53, 69, 0.2)
+  );
+  color: #ff8a9a;
+}
+
+/* Responsive: Tablet */
+@media (max-width: 1199px) {
+  .oracle-price-display {
+    font-size: 2rem;
+  }
+
+  .oracle-details {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Responsive: Mobile */
+@media (max-width: 767px) {
+  .oracle-price-card {
+    padding: 1.5rem;
+    margin-top: 1.5rem;
+  }
+
+  .oracle-price-display {
+    font-size: 1.75rem;
+  }
+
+  .oracle-header {
+    flex-wrap: wrap;
+  }
+
+  .oracle-detail-item {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.25rem;
+  }
+
+  .oracle-detail-item .label {
+    min-width: auto;
+    font-size: 0.8rem;
+  }
+}

@@ -1,9 +1,11 @@
+import { useMemo } from 'react';
 import type { PriceData } from '../types/binance';
 import type { MexcPriceData } from '../services/mexc';
 import type { BybitPriceData } from '../services/bybit';
 import type { GateioPriceData } from '../services/gateio';
 import type { KucoinPriceData } from '../services/kucoin';
 import type { BingXPriceData } from '../services/bingx';
+import { calculateOraclePrice, getTimeAgo, getConfidenceIcon } from '../services/oracle-calculator';
 
 interface PriceTabProps {
   binanceData: PriceData | null;
@@ -26,6 +28,19 @@ export function PriceTab({
   isConnecting,
   error
 }: PriceTabProps) {
+  // Calculate Oracle price using Chainlink Median method
+  const oracleResult = useMemo(
+    () => calculateOraclePrice(
+      binanceData,
+      mexcData,
+      bybitData,
+      gateioData,
+      kucoinData,
+      bingxData
+    ),
+    [binanceData, mexcData, bybitData, gateioData, kucoinData, bingxData]
+  );
+
   return (
     <section className="tab-content">
       {isConnecting && <p className="loading-message">Connecting to exchanges...</p>}
@@ -99,6 +114,48 @@ export function PriceTab({
             )}
           </tbody>
         </table>
+      )}
+
+      {/* Oracle Price Card */}
+      {oracleResult && (
+        <div className="oracle-price-card">
+          <div className="oracle-header">
+            <span className="oracle-icon">🎯</span>
+            <h3 className="oracle-title">ORACLE PRICE</h3>
+            <span className="oracle-subtitle">(Chainlink Method)</span>
+          </div>
+
+          <div className="oracle-price-display">
+            ${oracleResult.price.toFixed(7)} <span className="currency">USDT</span>
+          </div>
+
+          <div className="oracle-details">
+            <div className="oracle-detail-item">
+              <span className="label">Method:</span>
+              <span className="value">Median of {oracleResult.validSources} Exchanges</span>
+            </div>
+
+            <div className="oracle-detail-item">
+              <span className="label">Confidence:</span>
+              <span className={`confidence-badge confidence-${oracleResult.confidence.toLowerCase()}`}>
+                {getConfidenceIcon(oracleResult.confidence)} {oracleResult.confidence}
+              </span>
+            </div>
+
+            <div className="oracle-detail-item">
+              <span className="label">Range:</span>
+              <span className="value">
+                ${oracleResult.lowestPrice.toFixed(7)} - ${oracleResult.highestPrice.toFixed(7)}
+                <span className="spread"> ({oracleResult.spreadPercent.toFixed(2)}%)</span>
+              </span>
+            </div>
+
+            <div className="oracle-detail-item">
+              <span className="label">Updated:</span>
+              <span className="value">{getTimeAgo(oracleResult.timestamp)}</span>
+            </div>
+          </div>
+        </div>
       )}
     </section>
   );
