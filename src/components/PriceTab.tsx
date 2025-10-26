@@ -131,23 +131,23 @@ export function PriceTab({
 
           <div className="oracle-details">
             <div className="oracle-detail-item full-width">
-              <span className="label">計算方法:</span>
+              <span className="label">Calculation:</span>
               <span className="value explanation">
-                各取引所で VWAP = Σ(価格×出来高) / Σ(出来高) を計算し、
-                {oracleResult.validSources}取引所のVWAPの中央値（Median）をOracle価格とする
+                Calculate VWAP = Σ(price×volume) / Σ(volume) for each exchange,
+                then take the median of {oracleResult.validSources} exchange VWAPs as the Oracle price
               </span>
             </div>
 
             <div className="oracle-detail-item">
-              <span className="label">価格範囲:</span>
+              <span className="label">Price Range:</span>
               <span className="value">
                 ${oracleResult.lowestPrice.toFixed(7)} - ${oracleResult.highestPrice.toFixed(7)}
-                <span className="spread"> (差: {oracleResult.spreadPercent.toFixed(2)}%)</span>
+                <span className="spread"> (spread: {oracleResult.spreadPercent.toFixed(2)}%)</span>
               </span>
             </div>
 
             <div className="oracle-detail-item">
-              <span className="label">更新:</span>
+              <span className="label">Updated:</span>
               <span className="value">{getTimeAgo(oracleResult.timestamp)}</span>
             </div>
           </div>
