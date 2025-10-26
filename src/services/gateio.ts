@@ -17,6 +17,7 @@ export interface GateioPriceData {
   price: number;
   bid: number;
   ask: number;
+  lastUpdate: number;
 }
 
 export class GateioPriceMonitor {
@@ -117,7 +118,8 @@ export class GateioPriceMonitor {
       type: 'F', // Futures
       price,
       bid,
-      ask
+      ask,
+      lastUpdate: Date.now()
     };
 
     console.log('[Gate.io] Parsed price data:', priceData);

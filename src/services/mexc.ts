@@ -14,6 +14,7 @@ export interface MexcPriceData {
   price: number;
   bid: number;
   ask: number;
+  lastUpdate: number;
 }
 
 export class MexcPriceMonitor {
@@ -104,7 +105,8 @@ export class MexcPriceMonitor {
       type: 'F', // Futures
       price: data.lastPrice,
       bid: data.bid1,
-      ask: data.ask1
+      ask: data.ask1,
+      lastUpdate: Date.now()
     };
 
     console.log('[MEXC] Parsed price data:', priceData);

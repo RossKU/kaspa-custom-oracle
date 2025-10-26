@@ -14,6 +14,7 @@ export interface BybitPriceData {
   price: number;
   bid: number;
   ask: number;
+  lastUpdate: number;
 }
 
 export class BybitPriceMonitor {
@@ -114,7 +115,8 @@ export class BybitPriceMonitor {
       type: 'F', // Futures
       price,
       bid,
-      ask
+      ask,
+      lastUpdate: Date.now()
     };
 
     // Store for next delta update

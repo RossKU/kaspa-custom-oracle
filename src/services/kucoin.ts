@@ -35,6 +35,7 @@ export interface KucoinPriceData {
   price: number;
   bid: number;
   ask: number;
+  lastUpdate: number;
 }
 
 export class KucoinPriceMonitor {
@@ -214,7 +215,8 @@ export class KucoinPriceMonitor {
       type: 'F', // Futures
       price,
       bid,
-      ask
+      ask,
+      lastUpdate: Date.now()
     };
 
     this.onDataCallback?.(priceData);

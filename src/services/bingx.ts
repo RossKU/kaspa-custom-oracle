@@ -38,6 +38,7 @@ export interface BingXPriceData {
   price: number;
   bid: number;
   ask: number;
+  lastUpdate: number;
 }
 
 export class BingXPriceMonitor {
@@ -145,7 +146,8 @@ export class BingXPriceMonitor {
       type: 'F', // Futures
       price,
       bid,
-      ask
+      ask,
+      lastUpdate: Date.now()
     };
 
     // Store for next update
