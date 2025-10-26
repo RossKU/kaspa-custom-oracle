@@ -25,6 +25,8 @@ export interface BinanceOrderBook {
   asks: [string, string][];
 }
 
+import type { MarketTrade } from './oracle';
+
 export interface PriceData {
   symbol: string;
   price: number;
@@ -36,4 +38,5 @@ export interface PriceData {
   lastUpdate: number;
   bestBid: number;
   bestAsk: number;
+  trades: MarketTrade[]; // VWAP計算用の取引履歴
 }

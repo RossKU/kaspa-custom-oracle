@@ -1,11 +1,24 @@
 // Bybit Futures WebSocket V5
+import type { MarketTrade } from '../types/oracle';
+import { cleanupOldTrades } from '../types/oracle';
+
 const BYBIT_WS_URL = 'wss://stream.bybit.com/v5/public/linear';
+const TRADE_WINDOW_MS = 60000; // 60秒の取引履歴を保持
 
 interface BybitTickerData {
   symbol: string;
   lastPrice: string;
   bid1Price: string;
   ask1Price: string;
+}
+
+interface BybitTradeData {
+  T: number;     // Timestamp
+  s: string;     // Symbol
+  S: string;     // Side
+  v: string;     // Volume
+  p: string;     // Price
+  i: string;     // Trade ID
 }
 
 export interface BybitPriceData {
@@ -15,6 +28,7 @@ export interface BybitPriceData {
   bid: number;
   ask: number;
   lastUpdate: number;
+  trades: MarketTrade[];
 }
 
 export class BybitPriceMonitor {
@@ -23,6 +37,7 @@ export class BybitPriceMonitor {
   private onErrorCallback: ((error: string) => void) | null = null;
   private pingInterval: number | null = null;
   private lastPriceData: BybitPriceData | null = null;
+  private trades: MarketTrade[] = [];
 
   connect(
     onData: (data: BybitPriceData) => void,
@@ -38,8 +53,9 @@ export class BybitPriceMonitor {
     this.ws.onopen = () => {
       console.log('[Bybit] ✅ Connected!');
 
-      // Subscribe to KASUSDT ticker
+      // Subscribe to KASUSDT ticker and trades
       this.subscribeTicker();
+      this.subscribeTrades();
 
       // Start ping interval (every 20 seconds as recommended)
       this.pingInterval = window.setInterval(() => {
@@ -60,6 +76,11 @@ export class BybitPriceMonitor {
         // Handle ticker data
         if (message.topic && message.topic.startsWith('tickers.') && message.data) {
           this.handleTickerData(message.data);
+        }
+
+        // Handle trade data
+        if (message.topic && message.topic.startsWith('publicTrade.') && message.data) {
+          this.handleTradeData(message.data);
         }
       } catch (error) {
         console.error('[Bybit] Parse error:', error);
@@ -99,6 +120,16 @@ export class BybitPriceMonitor {
     this.ws?.send(JSON.stringify(subscribeMessage));
   }
 
+  private subscribeTrades() {
+    const subscribeMessage = {
+      op: 'subscribe',
+      args: ['publicTrade.KASUSDT']
+    };
+
+    console.log('[Bybit] Subscribing to trades:', subscribeMessage);
+    this.ws?.send(JSON.stringify(subscribeMessage));
+  }
+
   private sendPing() {
     const pingMessage = { op: 'ping' };
     this.ws?.send(JSON.stringify(pingMessage));
@@ -116,7 +147,8 @@ export class BybitPriceMonitor {
       price,
       bid,
       ask,
-      lastUpdate: Date.now()
+      lastUpdate: Date.now(),
+      trades: [...this.trades]
     };
 
     // Store for next delta update
@@ -126,6 +158,25 @@ export class BybitPriceMonitor {
     this.onDataCallback?.(priceData);
   }
 
+  private handleTradeData(trades: BybitTradeData[]) {
+    trades.forEach(trade => {
+      const marketTrade: MarketTrade = {
+        price: parseFloat(trade.p),
+        volume: parseFloat(trade.v),
+        timestamp: trade.T,
+        isBuyerMaker: trade.S === 'Sell',
+        tradeId: trade.i
+      };
+
+      this.trades.push(marketTrade);
+    });
+
+    // 古いデータをクリーンアップ
+    cleanupOldTrades(this.trades, TRADE_WINDOW_MS);
+
+    console.log('[Bybit] Trades updated, count:', this.trades.length);
+  }
+
   disconnect() {
     if (this.pingInterval) {
       clearInterval(this.pingInterval);
@@ -133,6 +184,8 @@ export class BybitPriceMonitor {
     }
     this.ws?.close();
     this.ws = null;
+    this.lastPriceData = null;
+    this.trades = [];
     this.onDataCallback = null;
     this.onErrorCallback = null;
   }

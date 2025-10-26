@@ -1,9 +1,12 @@
 // Kucoin Futures WebSocket with Token Authentication
 import { logger } from '../utils/logger';
+import type { MarketTrade } from '../types/oracle';
+import { cleanupOldTrades } from '../types/oracle';
 
 const TOKEN_API = 'https://api-futures.kucoin.com/api/v1/bullet-public';
 // CORS proxy (temporary solution for testing)
 const CORS_PROXY = 'https://corsproxy.io/?';
+const TRADE_WINDOW_MS = 60000;
 
 interface KucoinTokenResponse {
   code: string;
@@ -29,6 +32,17 @@ interface KucoinTickerData {
   // Note: tickerV2 does not include lastPrice, we calculate mid-price
 }
 
+interface KucoinExecutionData {
+  symbol: string;
+  side: string;
+  size: number;
+  price: string;
+  takerOrderId: string;
+  makerOrderId: string;
+  tradeId: string;
+  ts: number; // nanoseconds
+}
+
 export interface KucoinPriceData {
   exchange: string;
   type: string;
@@ -36,6 +50,7 @@ export interface KucoinPriceData {
   bid: number;
   ask: number;
   lastUpdate: number;
+  trades: MarketTrade[];
 }
 
 export class KucoinPriceMonitor {
@@ -45,6 +60,7 @@ export class KucoinPriceMonitor {
   private pingInterval: number | null = null;
   private token: string | null = null;
   private endpoint: string | null = null;
+  private trades: MarketTrade[] = [];
 
   async connect(
     onData: (data: KucoinPriceData) => void,
@@ -68,8 +84,9 @@ export class KucoinPriceMonitor {
       this.ws.onopen = () => {
         logger.info('Kucoin', '✅ Connected to WebSocket');
 
-        // Subscribe to KASUSDTM ticker
+        // Subscribe to KASUSDTM ticker and execution
         this.subscribeTicker();
+        this.subscribeExecution();
 
         // Start ping interval (server specifies interval, default 30s)
         this.pingInterval = window.setInterval(() => {
@@ -94,6 +111,11 @@ export class KucoinPriceMonitor {
           // Handle ticker data
           if (message.type === 'message' && message.topic === '/contractMarket/tickerV2:KASUSDTM') {
             this.handleTickerData(message.data);
+          }
+
+          // Handle execution data
+          if (message.type === 'message' && message.topic === '/contractMarket/execution:KASUSDTM') {
+            this.handleExecutionData(message.data);
           }
         } catch (error) {
           logger.error('Kucoin', '❌ Parse error', { error: error instanceof Error ? error.message : String(error) });
@@ -195,6 +217,18 @@ export class KucoinPriceMonitor {
     this.ws?.send(JSON.stringify(subscribeMessage));
   }
 
+  private subscribeExecution() {
+    const subscribeMessage = {
+      id: Date.now(),
+      type: 'subscribe',
+      topic: '/contractMarket/execution:KASUSDTM',
+      response: true
+    };
+
+    logger.info('Kucoin', 'Subscribing to execution', subscribeMessage);
+    this.ws?.send(JSON.stringify(subscribeMessage));
+  }
+
   private sendPing() {
     const pingMessage = {
       id: Date.now(),
@@ -216,10 +250,28 @@ export class KucoinPriceMonitor {
       price,
       bid,
       ask,
-      lastUpdate: Date.now()
+      lastUpdate: Date.now(),
+      trades: [...this.trades]
     };
 
     this.onDataCallback?.(priceData);
+  }
+
+  private handleExecutionData(data: KucoinExecutionData) {
+    const marketTrade: MarketTrade = {
+      price: parseFloat(data.price),
+      volume: data.size,
+      timestamp: Math.floor(data.ts / 1000000), // nanoseconds to milliseconds
+      isBuyerMaker: data.side === 'sell',
+      tradeId: data.tradeId
+    };
+
+    this.trades.push(marketTrade);
+
+    // 古いデータをクリーンアップ
+    cleanupOldTrades(this.trades, TRADE_WINDOW_MS);
+
+    logger.debug('Kucoin', 'Trades updated', { count: this.trades.length });
   }
 
   disconnect() {
@@ -227,5 +279,6 @@ export class KucoinPriceMonitor {
       clearInterval(this.pingInterval);
     }
     this.ws?.close();
+    this.trades = [];
   }
 }

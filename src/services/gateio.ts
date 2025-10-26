@@ -1,5 +1,9 @@
 // Gate.io Futures WebSocket V4
+import type { MarketTrade } from '../types/oracle';
+import { cleanupOldTrades } from '../types/oracle';
+
 const GATEIO_WS_URL = 'wss://fx-ws.gateio.ws/v4/ws/usdt';
+const TRADE_WINDOW_MS = 60000;
 
 interface GateioBookTickerData {
   t: number;
@@ -11,6 +15,15 @@ interface GateioBookTickerData {
   A: number;  // best ask size
 }
 
+interface GateioTradeData {
+  size: number;
+  id: number;
+  create_time: number;
+  create_time_ms: number;
+  price: string;
+  contract: string;
+}
+
 export interface GateioPriceData {
   exchange: string;
   type: string;
@@ -18,6 +31,7 @@ export interface GateioPriceData {
   bid: number;
   ask: number;
   lastUpdate: number;
+  trades: MarketTrade[];
 }
 
 export class GateioPriceMonitor {
@@ -25,6 +39,7 @@ export class GateioPriceMonitor {
   private onDataCallback: ((data: GateioPriceData) => void) | null = null;
   private onErrorCallback: ((error: string) => void) | null = null;
   private pingInterval: number | null = null;
+  private trades: MarketTrade[] = [];
 
   connect(
     onData: (data: GateioPriceData) => void,
@@ -40,8 +55,9 @@ export class GateioPriceMonitor {
     this.ws.onopen = () => {
       console.log('[Gate.io] ✅ Connected!');
 
-      // Subscribe to KAS_USDT book_ticker (bid/ask)
+      // Subscribe to KAS_USDT book_ticker and trades
       this.subscribeBookTicker();
+      this.subscribeTrades();
 
       // Start ping interval (every 30 seconds)
       this.pingInterval = window.setInterval(() => {
@@ -57,6 +73,11 @@ export class GateioPriceMonitor {
         // Handle book_ticker data
         if (message.channel === 'futures.book_ticker' && message.event === 'update' && message.result) {
           this.handleBookTickerData(message.result);
+        }
+
+        // Handle trades data
+        if (message.channel === 'futures.trades' && message.event === 'update' && message.result) {
+          this.handleTradeData(message.result);
         }
       } catch (error) {
         console.error('[Gate.io] Parse error:', error);
@@ -98,6 +119,18 @@ export class GateioPriceMonitor {
     this.ws?.send(JSON.stringify(subscribeMessage));
   }
 
+  private subscribeTrades() {
+    const subscribeMessage = {
+      time: Math.floor(Date.now() / 1000),
+      channel: 'futures.trades',
+      event: 'subscribe',
+      payload: ['KAS_USDT']
+    };
+
+    console.log('[Gate.io] Subscribing to trades:', subscribeMessage);
+    this.ws?.send(JSON.stringify(subscribeMessage));
+  }
+
   private sendPing() {
     const pingMessage = {
       time: Math.floor(Date.now() / 1000),
@@ -119,11 +152,30 @@ export class GateioPriceMonitor {
       price,
       bid,
       ask,
-      lastUpdate: Date.now()
+      lastUpdate: Date.now(),
+      trades: [...this.trades]
     };
 
     console.log('[Gate.io] Parsed price data:', priceData);
     this.onDataCallback?.(priceData);
+  }
+
+  private handleTradeData(trades: GateioTradeData[]) {
+    trades.forEach(trade => {
+      const marketTrade: MarketTrade = {
+        price: parseFloat(trade.price),
+        volume: Math.abs(trade.size),
+        timestamp: trade.create_time_ms,
+        tradeId: trade.id
+      };
+
+      this.trades.push(marketTrade);
+    });
+
+    // 古いデータをクリーンアップ
+    cleanupOldTrades(this.trades, TRADE_WINDOW_MS);
+
+    console.log('[Gate.io] Trades updated, count:', this.trades.length);
   }
 
   disconnect() {
@@ -133,6 +185,7 @@ export class GateioPriceMonitor {
     }
     this.ws?.close();
     this.ws = null;
+    this.trades = [];
     this.onDataCallback = null;
     this.onErrorCallback = null;
   }

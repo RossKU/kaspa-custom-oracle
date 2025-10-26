@@ -67,3 +67,67 @@ export interface ExchangePriceSource {
   /** データが有効かどうか */
   isValid: boolean;
 }
+
+/**
+ * 取引データ（VWAP計算用）
+ * WebSocketから受信した個別取引の情報
+ */
+export interface MarketTrade {
+  /** 取引価格 */
+  price: number;
+
+  /** 取引数量（出来高） */
+  volume: number;
+
+  /** 取引時刻（ミリ秒） */
+  timestamp: number;
+
+  /** 買い手が maker かどうか（オプション） */
+  isBuyerMaker?: boolean;
+
+  /** 取引ID（オプション） */
+  tradeId?: string | number;
+}
+
+/**
+ * 時間範囲内の取引データをフィルタリング
+ * @param trades 全取引データ
+ * @param windowMs ウィンドウサイズ（ミリ秒）
+ * @returns フィルタ後の取引データ
+ */
+export function filterTradesByTime(
+  trades: MarketTrade[],
+  windowMs: number
+): MarketTrade[] {
+  const now = Date.now();
+  const cutoffTime = now - windowMs;
+
+  return trades.filter(trade => trade.timestamp >= cutoffTime);
+}
+
+/**
+ * 古い取引データをクリーンアップ（破壊的変更）
+ * @param trades 取引データ配列
+ * @param windowMs ウィンドウサイズ（ミリ秒）
+ */
+export function cleanupOldTrades(
+  trades: MarketTrade[],
+  windowMs: number
+): void {
+  const now = Date.now();
+  const cutoffTime = now - windowMs;
+
+  // 古いデータを削除（配列の先頭から）
+  let removeCount = 0;
+  for (let i = 0; i < trades.length; i++) {
+    if (trades[i].timestamp < cutoffTime) {
+      removeCount++;
+    } else {
+      break; // 時系列順なので、新しいデータに到達したら終了
+    }
+  }
+
+  if (removeCount > 0) {
+    trades.splice(0, removeCount);
+  }
+}

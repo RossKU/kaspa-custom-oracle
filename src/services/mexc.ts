@@ -1,11 +1,24 @@
 // MEXC Futures WebSocket
+import type { MarketTrade } from '../types/oracle';
+import { cleanupOldTrades } from '../types/oracle';
+
 const MEXC_WS_URL = 'wss://contract.mexc.com/edge';
+const TRADE_WINDOW_MS = 60000; // 60秒の取引履歴を保持
 
 interface MexcTickerData {
   ask1: number;
   bid1: number;
   lastPrice: number;
   symbol: string;
+}
+
+interface MexcDealData {
+  p: number;   // price
+  v: number;   // volume
+  T: number;   // trade type
+  O: number;
+  M: number;
+  t: number;   // timestamp
 }
 
 export interface MexcPriceData {
@@ -15,6 +28,7 @@ export interface MexcPriceData {
   bid: number;
   ask: number;
   lastUpdate: number;
+  trades: MarketTrade[];
 }
 
 export class MexcPriceMonitor {
@@ -22,6 +36,7 @@ export class MexcPriceMonitor {
   private onDataCallback: ((data: MexcPriceData) => void) | null = null;
   private onErrorCallback: ((error: string) => void) | null = null;
   private pingInterval: number | null = null;
+  private trades: MarketTrade[] = [];
 
   connect(
     onData: (data: MexcPriceData) => void,
@@ -37,8 +52,9 @@ export class MexcPriceMonitor {
     this.ws.onopen = () => {
       console.log('[MEXC] ✅ Connected!');
 
-      // Subscribe to KAS_USDT ticker
+      // Subscribe to KAS_USDT ticker and deals
       this.subscribeTicker();
+      this.subscribeDeal();
 
       // Start ping interval (every 30 seconds)
       this.pingInterval = window.setInterval(() => {
@@ -53,6 +69,8 @@ export class MexcPriceMonitor {
 
         if (data.channel === 'push.ticker' && data.data) {
           this.handleTickerData(data.data);
+        } else if (data.channel === 'push.deal' && data.data) {
+          this.handleDealData(data.data);
         }
       } catch (error) {
         console.error('[MEXC] Parse error:', error);
@@ -94,6 +112,18 @@ export class MexcPriceMonitor {
     this.ws?.send(JSON.stringify(subscribeMessage));
   }
 
+  private subscribeDeal() {
+    const subscribeMessage = {
+      method: 'sub.deal',
+      param: {
+        symbol: 'KAS_USDT'
+      }
+    };
+
+    console.log('[MEXC] Subscribing to deal:', subscribeMessage);
+    this.ws?.send(JSON.stringify(subscribeMessage));
+  }
+
   private sendPing() {
     const pingMessage = { method: 'ping' };
     this.ws?.send(JSON.stringify(pingMessage));
@@ -106,11 +136,29 @@ export class MexcPriceMonitor {
       price: data.lastPrice,
       bid: data.bid1,
       ask: data.ask1,
-      lastUpdate: Date.now()
+      lastUpdate: Date.now(),
+      trades: [...this.trades]
     };
 
     console.log('[MEXC] Parsed price data:', priceData);
     this.onDataCallback?.(priceData);
+  }
+
+  private handleDealData(deals: MexcDealData[]) {
+    deals.forEach(deal => {
+      const trade: MarketTrade = {
+        price: deal.p,
+        volume: deal.v,
+        timestamp: deal.t
+      };
+
+      this.trades.push(trade);
+    });
+
+    // 古いデータをクリーンアップ
+    cleanupOldTrades(this.trades, TRADE_WINDOW_MS);
+
+    console.log('[MEXC] Trades updated, count:', this.trades.length);
   }
 
   disconnect() {
@@ -120,6 +168,7 @@ export class MexcPriceMonitor {
     }
     this.ws?.close();
     this.ws = null;
+    this.trades = [];
     this.onDataCallback = null;
     this.onErrorCallback = null;
   }

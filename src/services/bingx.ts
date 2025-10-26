@@ -1,7 +1,10 @@
 // BingX Perpetual Futures WebSocket with GZIP decompression
 import pako from 'pako';
+import type { MarketTrade } from '../types/oracle';
+import { cleanupOldTrades } from '../types/oracle';
 
 const BINGX_WS_URL = 'wss://open-api-swap.bingx.com/swap-market';
+const TRADE_WINDOW_MS = 60000;
 
 interface BingXTickerData {
   dataType?: string;
@@ -32,6 +35,13 @@ interface BingXTickerData {
   b?: string;          // bidQty
 }
 
+interface BingXTradeDetail {
+  time?: string;
+  makerSide?: string;
+  price?: number;
+  volume?: number;
+}
+
 export interface BingXPriceData {
   exchange: string;
   type: string;
@@ -39,6 +49,7 @@ export interface BingXPriceData {
   bid: number;
   ask: number;
   lastUpdate: number;
+  trades: MarketTrade[];
 }
 
 export class BingXPriceMonitor {
@@ -47,6 +58,7 @@ export class BingXPriceMonitor {
   private onErrorCallback: ((error: string) => void) | null = null;
   private pingInterval: number | null = null;
   private lastPriceData: BingXPriceData | null = null;
+  private trades: MarketTrade[] = [];
 
   connect(
     onData: (data: BingXPriceData) => void,
@@ -61,8 +73,9 @@ export class BingXPriceMonitor {
     this.ws.binaryType = 'arraybuffer';
 
     this.ws.onopen = () => {
-      // Subscribe to KAS-USDT ticker
+      // Subscribe to KAS-USDT ticker and trades
       this.subscribeTicker();
+      this.subscribeTrades();
 
       // Start ping interval (every 30 seconds)
       this.pingInterval = window.setInterval(() => {
@@ -85,6 +98,11 @@ export class BingXPriceMonitor {
         // Handle ticker data - be flexible with message format
         if (message.e === '24hrTicker' || message.dataType === 'KAS-USDT@ticker' || message.data) {
           this.handleTickerData(message);
+        }
+
+        // Handle trade detail data
+        if (message.dataType === 'market.tradeDetail.KAS-USDT' && message.data?.trades) {
+          this.handleTradeData(message.data.trades);
         }
       } catch (error) {
         this.onErrorCallback?.('Failed to parse ticker data');
@@ -118,6 +136,15 @@ export class BingXPriceMonitor {
     this.ws?.send(JSON.stringify(subscribeMessage));
   }
 
+  private subscribeTrades() {
+    const subscribeMessage = {
+      id: `trade_${Date.now()}`,
+      reqType: 'sub',
+      dataType: 'market.trade.detail.KAS-USDT'
+    };
+    this.ws?.send(JSON.stringify(subscribeMessage));
+  }
+
   private sendPing() {
     const pingMessage = {
       ping: Date.now()
@@ -147,7 +174,8 @@ export class BingXPriceMonitor {
       price,
       bid,
       ask,
-      lastUpdate: Date.now()
+      lastUpdate: Date.now(),
+      trades: [...this.trades]
     };
 
     // Store for next update
@@ -155,10 +183,31 @@ export class BingXPriceMonitor {
     this.onDataCallback?.(priceData);
   }
 
+  private handleTradeData(trades: BingXTradeDetail[]) {
+    trades.forEach(trade => {
+      if (trade.price && trade.volume && trade.time) {
+        const marketTrade: MarketTrade = {
+          price: trade.price,
+          volume: trade.volume,
+          timestamp: new Date(trade.time).getTime(),
+          isBuyerMaker: trade.makerSide === 'Bid'
+        };
+
+        this.trades.push(marketTrade);
+      }
+    });
+
+    // 古いデータをクリーンアップ
+    cleanupOldTrades(this.trades, TRADE_WINDOW_MS);
+
+    console.log('[BingX] Trades updated, count:', this.trades.length);
+  }
+
   disconnect() {
     if (this.pingInterval) {
       clearInterval(this.pingInterval);
     }
     this.ws?.close();
+    this.trades = [];
   }
 }
