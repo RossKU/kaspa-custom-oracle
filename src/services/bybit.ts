@@ -79,7 +79,7 @@ export class BybitPriceMonitor {
         if (message.topic && message.topic.startsWith('publicTrade.') && message.data) {
           this.handleTradeData(message.data);
         }
-      } catch (error) {
+      } catch {
         this.onErrorCallback?.('Failed to parse Bybit data');
       }
     };

@@ -117,8 +117,8 @@ export class KucoinPriceMonitor {
           if (message.type === 'message' && message.topic === '/contractMarket/execution:KASUSDTM') {
             this.handleExecutionData(message.data);
           }
-        } catch (error) {
-          logger.error('Kucoin', '❌ Parse error', { error: error instanceof Error ? error.message : String(error) });
+        } catch (err) {
+          logger.error('Kucoin', '❌ Parse error', { error: err instanceof Error ? err.message : String(err) });
           this.onErrorCallback?.('Failed to parse ticker data');
         }
       };

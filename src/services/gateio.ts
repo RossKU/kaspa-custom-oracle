@@ -76,7 +76,7 @@ export class GateioPriceMonitor {
         if (message.channel === 'futures.trades' && message.event === 'update' && message.result) {
           this.handleTradeData(message.result);
         }
-      } catch (error) {
+      } catch {
         this.onErrorCallback?.('Failed to parse Gate.io data');
       }
     };

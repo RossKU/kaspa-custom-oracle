@@ -69,7 +69,7 @@ export class MexcPriceMonitor {
         } else if (data.channel === 'push.deal' && data.data) {
           this.handleDealData(data.data);
         }
-      } catch (error) {
+      } catch {
         this.onErrorCallback?.('Failed to parse MEXC data');
       }
     };
