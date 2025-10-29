@@ -1,9 +1,17 @@
 // Gate.io Futures WebSocket V4
 import type { MarketTrade } from '../types/oracle';
 import { cleanupOldTrades } from '../types/oracle';
+import {
+  createPriceHistory,
+  addSnapshot,
+  calculateVolumeStatsFromTrades,
+  type PriceHistory,
+  type VolumeStats,
+} from '../types/lending-oracle';
 
 const GATEIO_WS_URL = 'wss://fx-ws.gateio.ws/v4/ws/usdt';
 const TRADE_WINDOW_MS = 60000;
+const SNAPSHOT_INTERVAL_MS = 100;
 
 interface GateioBookTickerData {
   t: number;
@@ -32,8 +40,8 @@ export interface GateioPriceData {
   ask: number;
   lastUpdate: number;
   trades: MarketTrade[];
-  priceHistory?: any; // Phase 1: Will be implemented
-  volumeStats?: any; // Phase 1: Will be implemented
+  priceHistory?: PriceHistory;
+  volumeStats?: VolumeStats;
 }
 
 export class GateioPriceMonitor {
@@ -42,6 +50,12 @@ export class GateioPriceMonitor {
   private onErrorCallback: ((error: string) => void) | null = null;
   private pingInterval: number | null = null;
   private trades: MarketTrade[] = [];
+
+  // Phase 1: Lending Oracle data collection
+  private priceHistory: PriceHistory = createPriceHistory();
+  private snapshotTimer: number | null = null;
+  private currentPrice: number = 0;
+  private lastUpdate: number = 0;
 
   connect(
     onData: (data: GateioPriceData) => void,
@@ -100,6 +114,24 @@ export class GateioPriceMonitor {
         }
       }, 5000);
     };
+
+    // Phase 1: Start snapshot timer
+    this.startSnapshotTimer();
+  }
+
+  private startSnapshotTimer() {
+    if (this.snapshotTimer !== null) {
+      clearInterval(this.snapshotTimer);
+    }
+    this.snapshotTimer = window.setInterval(() => {
+      if (this.currentPrice > 0) {
+        addSnapshot(this.priceHistory, {
+          price: this.currentPrice,
+          clientTimestamp: Date.now(),
+          serverTimestamp: this.lastUpdate,
+        });
+      }
+    }, SNAPSHOT_INTERVAL_MS);
   }
 
   private subscribeBookTicker() {
@@ -139,14 +171,23 @@ export class GateioPriceMonitor {
     // Calculate mid price from bid and ask
     const price = (bid + ask) / 2;
 
+    // Phase 1: Update price for snapshots
+    this.currentPrice = price;
+    this.lastUpdate = Date.now();
+
+    // Phase 1: Calculate volume stats from 60-second window trades
+    const volumeStats = calculateVolumeStatsFromTrades(this.trades);
+
     const priceData: GateioPriceData = {
       exchange: 'Gate.io',
       type: 'F', // Futures
       price,
       bid,
       ask,
-      lastUpdate: Date.now(),
-      trades: [...this.trades]
+      lastUpdate: this.lastUpdate,
+      trades: [...this.trades],
+      priceHistory: this.priceHistory,
+      volumeStats,
     };
 
     this.onDataCallback?.(priceData);
@@ -174,9 +215,14 @@ export class GateioPriceMonitor {
       clearInterval(this.pingInterval);
       this.pingInterval = null;
     }
+    if (this.snapshotTimer !== null) {
+      clearInterval(this.snapshotTimer);
+      this.snapshotTimer = null;
+    }
     this.ws?.close();
     this.ws = null;
     this.trades = [];
+    this.priceHistory = createPriceHistory();
     this.onDataCallback = null;
     this.onErrorCallback = null;
   }

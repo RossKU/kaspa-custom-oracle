@@ -1,9 +1,17 @@
 // Bybit Futures WebSocket V5
 import type { MarketTrade } from '../types/oracle';
 import { cleanupOldTrades } from '../types/oracle';
+import {
+  createPriceHistory,
+  addSnapshot,
+  calculateVolumeStatsFromTrades,
+  type PriceHistory,
+  type VolumeStats,
+} from '../types/lending-oracle';
 
 const BYBIT_WS_URL = 'wss://stream.bybit.com/v5/public/linear';
 const TRADE_WINDOW_MS = 60000; // 60秒の取引履歴を保持
+const SNAPSHOT_INTERVAL_MS = 100; // 100ms間隔でスナップショット
 
 interface BybitTickerData {
   symbol: string;
@@ -29,8 +37,8 @@ export interface BybitPriceData {
   ask: number;
   lastUpdate: number;
   trades: MarketTrade[];
-  priceHistory?: any; // Phase 1: Will be implemented
-  volumeStats?: any; // Phase 1: Will be implemented
+  priceHistory?: PriceHistory;
+  volumeStats?: VolumeStats;
 }
 
 export class BybitPriceMonitor {
@@ -40,6 +48,12 @@ export class BybitPriceMonitor {
   private pingInterval: number | null = null;
   private lastPriceData: BybitPriceData | null = null;
   private trades: MarketTrade[] = [];
+
+  // Phase 1: Lending Oracle data collection
+  private priceHistory: PriceHistory = createPriceHistory();
+  private snapshotTimer: number | null = null;
+  private currentPrice: number = 0;
+  private lastUpdate: number = 0;
 
   connect(
     onData: (data: BybitPriceData) => void,
@@ -103,6 +117,24 @@ export class BybitPriceMonitor {
         }
       }, 5000);
     };
+
+    // Phase 1: Start snapshot timer
+    this.startSnapshotTimer();
+  }
+
+  private startSnapshotTimer() {
+    if (this.snapshotTimer !== null) {
+      clearInterval(this.snapshotTimer);
+    }
+    this.snapshotTimer = window.setInterval(() => {
+      if (this.currentPrice > 0) {
+        addSnapshot(this.priceHistory, {
+          price: this.currentPrice,
+          clientTimestamp: Date.now(),
+          serverTimestamp: this.lastUpdate,
+        });
+      }
+    }, SNAPSHOT_INTERVAL_MS);
   }
 
   private subscribeTicker() {
@@ -134,14 +166,23 @@ export class BybitPriceMonitor {
     const bid = data.bid1Price ? parseFloat(data.bid1Price) : (this.lastPriceData?.bid ?? 0);
     const ask = data.ask1Price ? parseFloat(data.ask1Price) : (this.lastPriceData?.ask ?? 0);
 
+    // Phase 1: Update price for snapshots
+    this.currentPrice = price;
+    this.lastUpdate = Date.now();
+
+    // Phase 1: Calculate volume stats from 60-second window trades
+    const volumeStats = calculateVolumeStatsFromTrades(this.trades);
+
     const priceData: BybitPriceData = {
       exchange: 'Bybit',
       type: 'F', // Futures
       price,
       bid,
       ask,
-      lastUpdate: Date.now(),
-      trades: [...this.trades]
+      lastUpdate: this.lastUpdate,
+      trades: [...this.trades],
+      priceHistory: this.priceHistory,
+      volumeStats,
     };
 
     // Store for next delta update
@@ -173,10 +214,15 @@ export class BybitPriceMonitor {
       clearInterval(this.pingInterval);
       this.pingInterval = null;
     }
+    if (this.snapshotTimer !== null) {
+      clearInterval(this.snapshotTimer);
+      this.snapshotTimer = null;
+    }
     this.ws?.close();
     this.ws = null;
     this.lastPriceData = null;
     this.trades = [];
+    this.priceHistory = createPriceHistory();
     this.onDataCallback = null;
     this.onErrorCallback = null;
   }
