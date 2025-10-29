@@ -1,9 +1,17 @@
+import { useState, useEffect, useRef } from 'react';
 import type { PriceData } from '../types/binance';
 import type { MexcPriceData } from '../services/mexc';
 import type { BybitPriceData } from '../services/bybit';
 import type { GateioPriceData } from '../services/gateio';
 import type { KucoinPriceData } from '../services/kucoin';
 import type { BingXPriceData } from '../services/bingx';
+
+interface DebugLogEntry {
+  timestamp: number;
+  exchange: string;
+  level: 'info' | 'success' | 'warning' | 'error';
+  message: string;
+}
 
 interface LendingOracleTabProps {
   binanceData: PriceData | null;
@@ -22,6 +30,18 @@ export function LendingOracleTab({
   kucoinData,
   bingxData,
 }: LendingOracleTabProps) {
+  const [debugLogs, setDebugLogs] = useState<DebugLogEntry[]>([]);
+  const [autoScroll, setAutoScroll] = useState(true);
+  const logContainerRef = useRef<HTMLDivElement>(null);
+  const prevDataRef = useRef<{
+    binance?: number;
+    mexc?: number;
+    bybit?: number;
+    gateio?: number;
+    kucoin?: number;
+    bingx?: number;
+  }>({});
+
   // Count active exchanges
   const exchanges = [
     { name: 'Binance', data: binanceData },
@@ -33,6 +53,58 @@ export function LendingOracleTab({
   ];
 
   const activeExchanges = exchanges.filter(ex => ex.data !== null);
+
+  const addLog = (exchange: string, level: DebugLogEntry['level'], message: string) => {
+    setDebugLogs(prev => {
+      const newLogs = [...prev, {
+        timestamp: Date.now(),
+        exchange,
+        level,
+        message,
+      }];
+      // Keep only last 100 logs
+      return newLogs.slice(-100);
+    });
+  };
+
+  // Auto-scroll to bottom
+  useEffect(() => {
+    if (autoScroll && logContainerRef.current) {
+      logContainerRef.current.scrollTop = logContainerRef.current.scrollHeight;
+    }
+  }, [debugLogs, autoScroll]);
+
+  // Monitor Binance data changes
+  useEffect(() => {
+    if (!binanceData) return;
+
+    const snapshotCount = binanceData.priceHistory?.snapshots?.length || 0;
+    const volumeSamples = binanceData.volumeStats?.sampleCount || 0;
+
+    if (prevDataRef.current.binance === undefined) {
+      addLog('Binance', 'success', `Connected - Phase 1 collection started`);
+    } else if (snapshotCount > 0 && snapshotCount % 50 === 0 && snapshotCount !== prevDataRef.current.binance) {
+      addLog('Binance', 'info', `Snapshots: ${snapshotCount}, Volume samples: ${volumeSamples}`);
+    }
+
+    prevDataRef.current.binance = snapshotCount;
+  }, [binanceData]);
+
+  // Monitor MEXC data changes
+  useEffect(() => {
+    if (!mexcData) return;
+
+    const snapshotCount = mexcData.priceHistory?.snapshots?.length || 0;
+    const volumeSamples = mexcData.volumeStats?.sampleCount || 0;
+
+    if (prevDataRef.current.mexc === undefined) {
+      addLog('MEXC', 'success', `Connected - Phase 1 collection started`);
+    } else if (snapshotCount > 0 && snapshotCount % 50 === 0 && snapshotCount !== prevDataRef.current.mexc) {
+      addLog('MEXC', 'info', `Snapshots: ${snapshotCount}, Volume samples: ${volumeSamples}`);
+    }
+
+    prevDataRef.current.mexc = snapshotCount;
+  }, [mexcData]);
 
   return (
     <section className="tab-content">
@@ -144,6 +216,46 @@ export function LendingOracleTab({
               <h4>🔒 Delayed Confirmation</h4>
               <p>2-5 second delay for deterministic, immutable price confirmation resistant to flash loan attacks</p>
             </div>
+          </div>
+        </div>
+
+        <div className="lending-oracle-debug">
+          <div className="debug-header">
+            <h3>🐛 Phase 1 Debug Log</h3>
+            <div className="debug-controls">
+              <label className="debug-control">
+                <input
+                  type="checkbox"
+                  checked={autoScroll}
+                  onChange={(e) => setAutoScroll(e.target.checked)}
+                />
+                <span>Auto-scroll</span>
+              </label>
+              <button
+                className="debug-clear-btn"
+                onClick={() => setDebugLogs([])}
+              >
+                Clear Logs
+              </button>
+            </div>
+          </div>
+
+          <div className="debug-log-container" ref={logContainerRef}>
+            {debugLogs.length === 0 ? (
+              <div className="debug-log-empty">
+                Waiting for data collection events...
+              </div>
+            ) : (
+              debugLogs.map((log, index) => (
+                <div key={index} className={`debug-log-entry debug-log-${log.level}`}>
+                  <span className="debug-log-time">
+                    {new Date(log.timestamp).toLocaleTimeString()}
+                  </span>
+                  <span className="debug-log-exchange">[{log.exchange}]</span>
+                  <span className="debug-log-message">{log.message}</span>
+                </div>
+              ))
+            )}
           </div>
         </div>
       </div>
