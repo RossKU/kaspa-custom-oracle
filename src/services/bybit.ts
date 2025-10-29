@@ -1,18 +1,9 @@
 // Bybit Futures WebSocket V5
 import type { MarketTrade } from '../types/oracle';
 import { cleanupOldTrades } from '../types/oracle';
-import {
-  createPriceHistory,
-  createVolumeStats,
-  addSnapshot,
-  updateVolumeStats,
-  type PriceHistory,
-  type VolumeStats,
-} from '../types/lending-oracle';
 
 const BYBIT_WS_URL = 'wss://stream.bybit.com/v5/public/linear';
 const TRADE_WINDOW_MS = 60000; // 60秒の取引履歴を保持
-const SNAPSHOT_INTERVAL_MS = 100;
 
 interface BybitTickerData {
   symbol: string;
@@ -49,10 +40,6 @@ export class BybitPriceMonitor {
   private pingInterval: number | null = null;
   private lastPriceData: BybitPriceData | null = null;
   private trades: MarketTrade[] = [];
-  private priceHistory: PriceHistory = createPriceHistory();
-  private volumeStats: VolumeStats = createVolumeStats();
-  private snapshotTimer: number | null = null;
-  private lastSnapshotTime: number = 0;
 
   connect(
     onData: (data: BybitPriceData) => void,

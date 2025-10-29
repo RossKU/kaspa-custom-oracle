@@ -51,7 +51,6 @@ export class MexcPriceMonitor {
   private priceHistory: PriceHistory = createPriceHistory();
   private volumeStats: VolumeStats = createVolumeStats();
   private snapshotTimer: number | null = null;
-  private lastSnapshotTime: number = 0;
   private currentPrice: number = 0;
   private lastUpdate: number = 0;
 
@@ -124,7 +123,6 @@ export class MexcPriceMonitor {
           clientTimestamp: Date.now(),
           serverTimestamp: this.lastUpdate,
         });
-        this.lastSnapshotTime = Date.now();
       }
     }, SNAPSHOT_INTERVAL_MS);
   }
