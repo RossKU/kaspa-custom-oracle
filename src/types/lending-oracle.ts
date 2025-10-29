@@ -22,13 +22,13 @@ export interface PriceSnapshot {
 
 /**
  * 価格履歴バッファ（循環バッファ）
- * 過去5-10分間の価格スナップショットを保持
+ * 過去1分間の価格スナップショットを保持（オフセット計算用）
  */
 export interface PriceHistory {
   /** スナップショット配列（最大サイズに達したら古いものから削除） */
   snapshots: PriceSnapshot[];
 
-  /** 最大保持数（デフォルト: 6000 = 10分間 @ 100ms間隔） */
+  /** 最大保持数（デフォルト: 600 = 1分間 @ 100ms間隔） */
   maxSize: number;
 
   /** 最後の追加時刻 */
@@ -104,7 +104,7 @@ export interface Phase1CollectionState {
 /**
  * 価格履歴バッファを作成
  */
-export function createPriceHistory(maxSize: number = 6000): PriceHistory {
+export function createPriceHistory(maxSize: number = 600): PriceHistory {
   return {
     snapshots: [],
     maxSize,
