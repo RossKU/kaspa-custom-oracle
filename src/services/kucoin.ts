@@ -2,11 +2,19 @@
 import { logger } from '../utils/logger';
 import type { MarketTrade } from '../types/oracle';
 import { cleanupOldTrades } from '../types/oracle';
+import {
+  createPriceHistory,
+  addSnapshot,
+  calculateVolumeStatsFromTrades,
+  type PriceHistory,
+  type VolumeStats,
+} from '../types/lending-oracle';
 
 const TOKEN_API = 'https://api-futures.kucoin.com/api/v1/bullet-public';
 // CORS proxy (temporary solution for testing)
 const CORS_PROXY = 'https://corsproxy.io/?';
 const TRADE_WINDOW_MS = 60000;
+const SNAPSHOT_INTERVAL_MS = 100;
 
 interface KucoinTokenResponse {
   code: string;
@@ -51,8 +59,8 @@ export interface KucoinPriceData {
   ask: number;
   lastUpdate: number;
   trades: MarketTrade[];
-  priceHistory?: any; // Phase 1: Will be implemented
-  volumeStats?: any; // Phase 1: Will be implemented
+  priceHistory?: PriceHistory;
+  volumeStats?: VolumeStats;
 }
 
 export class KucoinPriceMonitor {
@@ -63,6 +71,12 @@ export class KucoinPriceMonitor {
   private token: string | null = null;
   private endpoint: string | null = null;
   private trades: MarketTrade[] = [];
+
+  // Phase 1: Lending Oracle data collection
+  private priceHistory: PriceHistory = createPriceHistory();
+  private snapshotTimer: number | null = null;
+  private currentPrice: number = 0;
+  private lastUpdate: number = 0;
 
   async connect(
     onData: (data: KucoinPriceData) => void,
@@ -94,6 +108,9 @@ export class KucoinPriceMonitor {
         this.pingInterval = window.setInterval(() => {
           this.sendPing();
         }, 30000);
+
+        // Phase 1: Start snapshot timer
+        this.startSnapshotTimer();
       };
 
       this.ws.onmessage = (event) => {
@@ -236,6 +253,21 @@ export class KucoinPriceMonitor {
     this.ws?.send(JSON.stringify(pingMessage));
   }
 
+  private startSnapshotTimer() {
+    if (this.snapshotTimer !== null) {
+      clearInterval(this.snapshotTimer);
+    }
+    this.snapshotTimer = window.setInterval(() => {
+      if (this.currentPrice > 0) {
+        addSnapshot(this.priceHistory, {
+          price: this.currentPrice,
+          clientTimestamp: Date.now(),
+          serverTimestamp: this.lastUpdate,
+        });
+      }
+    }, SNAPSHOT_INTERVAL_MS);
+  }
+
   private handleTickerData(data: KucoinTickerData) {
     const bid = typeof data.bestBidPrice === 'number' ? data.bestBidPrice : parseFloat(String(data.bestBidPrice));
     const ask = typeof data.bestAskPrice === 'number' ? data.bestAskPrice : parseFloat(String(data.bestAskPrice));
@@ -243,14 +275,23 @@ export class KucoinPriceMonitor {
     // tickerV2 doesn't include lastPrice, so calculate mid-price
     const price = (bid + ask) / 2;
 
+    // Phase 1: Update price for snapshots
+    this.currentPrice = price;
+    this.lastUpdate = Date.now();
+
+    // Phase 1: Calculate volume stats from 60-second window trades
+    const volumeStats = calculateVolumeStatsFromTrades(this.trades);
+
     const priceData: KucoinPriceData = {
       exchange: 'Kucoin',
       type: 'F', // Futures
       price,
       bid,
       ask,
-      lastUpdate: Date.now(),
-      trades: [...this.trades]
+      lastUpdate: this.lastUpdate,
+      trades: [...this.trades],
+      priceHistory: this.priceHistory,
+      volumeStats,
     };
 
     this.onDataCallback?.(priceData);
@@ -277,7 +318,12 @@ export class KucoinPriceMonitor {
     if (this.pingInterval) {
       clearInterval(this.pingInterval);
     }
+    if (this.snapshotTimer !== null) {
+      clearInterval(this.snapshotTimer);
+      this.snapshotTimer = null;
+    }
     this.ws?.close();
     this.trades = [];
+    this.priceHistory = createPriceHistory();
   }
 }

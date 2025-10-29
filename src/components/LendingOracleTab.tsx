@@ -176,6 +176,40 @@ export function LendingOracleTab({
     prevDataRef.current.gateio = snapshotCount;
   }, [gateioData]);
 
+  // Monitor Kucoin data changes
+  useEffect(() => {
+    if (!kucoinData) return;
+
+    const snapshotCount = kucoinData.priceHistory?.snapshots?.length || 0;
+    const tradesIn60s = kucoinData.volumeStats?.sampleCount || 0;
+    const avgVolume = kucoinData.volumeStats?.mean || 0;
+
+    if (prevDataRef.current.kucoin === undefined) {
+      addLog('Kucoin', 'success', `Connected - Phase 1 collection started`);
+    } else if (snapshotCount > 0 && snapshotCount % 100 === 0 && snapshotCount !== prevDataRef.current.kucoin) {
+      addLog('Kucoin', 'info', `Snapshots: ${snapshotCount} | 60s window: ${tradesIn60s} trades, avg volume: ${avgVolume.toFixed(2)} KAS`);
+    }
+
+    prevDataRef.current.kucoin = snapshotCount;
+  }, [kucoinData]);
+
+  // Monitor BingX data changes
+  useEffect(() => {
+    if (!bingxData) return;
+
+    const snapshotCount = bingxData.priceHistory?.snapshots?.length || 0;
+    const tradesIn60s = bingxData.volumeStats?.sampleCount || 0;
+    const avgVolume = bingxData.volumeStats?.mean || 0;
+
+    if (prevDataRef.current.bingx === undefined) {
+      addLog('BingX', 'success', `Connected - Phase 1 collection started`);
+    } else if (snapshotCount > 0 && snapshotCount % 100 === 0 && snapshotCount !== prevDataRef.current.bingx) {
+      addLog('BingX', 'info', `Snapshots: ${snapshotCount} | 60s window: ${tradesIn60s} trades, avg volume: ${avgVolume.toFixed(2)} KAS`);
+    }
+
+    prevDataRef.current.bingx = snapshotCount;
+  }, [bingxData]);
+
   return (
     <section className="tab-content">
       <div className="lending-oracle-container">

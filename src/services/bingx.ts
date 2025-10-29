@@ -2,9 +2,17 @@
 import pako from 'pako';
 import type { MarketTrade } from '../types/oracle';
 import { cleanupOldTrades } from '../types/oracle';
+import {
+  createPriceHistory,
+  addSnapshot,
+  calculateVolumeStatsFromTrades,
+  type PriceHistory,
+  type VolumeStats,
+} from '../types/lending-oracle';
 
 const BINGX_WS_URL = 'wss://open-api-swap.bingx.com/swap-market';
 const TRADE_WINDOW_MS = 60000;
+const SNAPSHOT_INTERVAL_MS = 100;
 
 interface BingXTickerData {
   dataType?: string;
@@ -50,8 +58,8 @@ export interface BingXPriceData {
   ask: number;
   lastUpdate: number;
   trades: MarketTrade[];
-  priceHistory?: any; // Phase 1: Will be implemented
-  volumeStats?: any; // Phase 1: Will be implemented
+  priceHistory?: PriceHistory;
+  volumeStats?: VolumeStats;
 }
 
 export class BingXPriceMonitor {
@@ -61,6 +69,12 @@ export class BingXPriceMonitor {
   private pingInterval: number | null = null;
   private lastPriceData: BingXPriceData | null = null;
   private trades: MarketTrade[] = [];
+
+  // Phase 1: Lending Oracle data collection
+  private priceHistory: PriceHistory = createPriceHistory();
+  private snapshotTimer: number | null = null;
+  private currentPrice: number = 0;
+  private lastUpdate: number = 0;
 
   connect(
     onData: (data: BingXPriceData) => void,
@@ -83,6 +97,9 @@ export class BingXPriceMonitor {
       this.pingInterval = window.setInterval(() => {
         this.sendPing();
       }, 30000);
+
+      // Phase 1: Start snapshot timer
+      this.startSnapshotTimer();
     };
 
     this.ws.onmessage = async (event) => {
@@ -154,6 +171,21 @@ export class BingXPriceMonitor {
     this.ws?.send(JSON.stringify(pingMessage));
   }
 
+  private startSnapshotTimer() {
+    if (this.snapshotTimer !== null) {
+      clearInterval(this.snapshotTimer);
+    }
+    this.snapshotTimer = window.setInterval(() => {
+      if (this.currentPrice > 0) {
+        addSnapshot(this.priceHistory, {
+          price: this.currentPrice,
+          clientTimestamp: Date.now(),
+          serverTimestamp: this.lastUpdate,
+        });
+      }
+    }, SNAPSHOT_INTERVAL_MS);
+  }
+
   private handleTickerData(msg: BingXTickerData) {
     // BingX can send data in two formats:
     // 1. Nested: { dataType: "...", data: { c: "...", B: "...", A: "..." } }
@@ -170,14 +202,23 @@ export class BingXPriceMonitor {
       return;
     }
 
+    // Phase 1: Update price for snapshots
+    this.currentPrice = price;
+    this.lastUpdate = Date.now();
+
+    // Phase 1: Calculate volume stats from 60-second window trades
+    const volumeStats = calculateVolumeStatsFromTrades(this.trades);
+
     const priceData: BingXPriceData = {
       exchange: 'BingX',
       type: 'F', // Futures
       price,
       bid,
       ask,
-      lastUpdate: Date.now(),
-      trades: [...this.trades]
+      lastUpdate: this.lastUpdate,
+      trades: [...this.trades],
+      priceHistory: this.priceHistory,
+      volumeStats,
     };
 
     // Store for next update
@@ -208,7 +249,12 @@ export class BingXPriceMonitor {
     if (this.pingInterval) {
       clearInterval(this.pingInterval);
     }
+    if (this.snapshotTimer !== null) {
+      clearInterval(this.snapshotTimer);
+      this.snapshotTimer = null;
+    }
     this.ws?.close();
     this.trades = [];
+    this.priceHistory = createPriceHistory();
   }
 }
