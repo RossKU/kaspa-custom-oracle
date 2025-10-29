@@ -144,6 +144,7 @@ export function createVolumeStats(): VolumeStats {
 
 /**
  * 出来高統計を更新（オンラインアルゴリズム）
+ * @deprecated Use calculateVolumeStatsFromTrades instead for 60-second window
  */
 export function updateVolumeStats(
   stats: VolumeStats,
@@ -166,6 +167,38 @@ export function updateVolumeStats(
   stats.min = Math.min(stats.min, newVolume);
   stats.max = Math.max(stats.max, newVolume);
   stats.lastUpdate = timestamp;
+}
+
+/**
+ * 60秒窓の取引データから出来高統計を計算
+ * VWAP計算のweight用
+ */
+export function calculateVolumeStatsFromTrades(
+  trades: Array<{ volume: number; timestamp: number }>
+): VolumeStats {
+  if (trades.length === 0) {
+    return createVolumeStats();
+  }
+
+  const volumes = trades.map(t => t.volume);
+  const sum = volumes.reduce((acc, v) => acc + v, 0);
+  const mean = sum / volumes.length;
+
+  // Calculate variance
+  const variance = volumes.reduce((acc, v) => acc + (v - mean) ** 2, 0) / volumes.length;
+  const stdDev = Math.sqrt(variance);
+
+  const min = Math.min(...volumes);
+  const max = Math.max(...volumes);
+
+  return {
+    mean,
+    stdDev,
+    sampleCount: volumes.length,
+    min,
+    max,
+    lastUpdate: Date.now(),
+  };
 }
 
 /**

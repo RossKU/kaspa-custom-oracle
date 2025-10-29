@@ -3,9 +3,8 @@ import type { MarketTrade } from '../types/oracle';
 import { cleanupOldTrades } from '../types/oracle';
 import {
   createPriceHistory,
-  createVolumeStats,
   addSnapshot,
-  updateVolumeStats,
+  calculateVolumeStatsFromTrades,
   type PriceHistory,
   type VolumeStats,
 } from '../types/lending-oracle';
@@ -25,7 +24,6 @@ export class BinancePriceMonitor {
 
   // Phase 1: Lending Oracle data collection
   private priceHistory: PriceHistory = createPriceHistory();
-  private volumeStats: VolumeStats = createVolumeStats();
   private snapshotTimer: number | null = null;
   private lastSnapshotTime: number = 0;
 
@@ -127,10 +125,6 @@ export class BinancePriceMonitor {
         // 古いデータをクリーンアップ
         cleanupOldTrades(this.trades, TRADE_WINDOW_MS);
 
-        // Phase 1: Update volume statistics
-        const volume = parseFloat(data.q);
-        updateVolumeStats(this.volumeStats, volume, Date.now());
-
         this.emitData();
       } catch (error) {
         // Silent error
@@ -192,12 +186,15 @@ export class BinancePriceMonitor {
       this.currentData.bestBid !== undefined &&
       this.currentData.bestAsk !== undefined
     ) {
+      // Phase 1: Calculate volume stats from 60-second window trades
+      const volumeStats = calculateVolumeStatsFromTrades(this.trades);
+
       this.onDataCallback?.({
         ...this.currentData,
         trades: [...this.trades], // コピーを渡す
         // Phase 1: Include lending oracle data
         priceHistory: this.priceHistory,
-        volumeStats: this.volumeStats,
+        volumeStats,
       } as PriceData);
     }
   }
@@ -219,7 +216,6 @@ export class BinancePriceMonitor {
 
     // Phase 1: Reset lending oracle data
     this.priceHistory = createPriceHistory();
-    this.volumeStats = createVolumeStats();
     this.lastSnapshotTime = 0;
 
     this.onDataCallback = null;

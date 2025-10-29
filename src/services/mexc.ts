@@ -3,9 +3,8 @@ import type { MarketTrade } from '../types/oracle';
 import { cleanupOldTrades } from '../types/oracle';
 import {
   createPriceHistory,
-  createVolumeStats,
   addSnapshot,
-  updateVolumeStats,
+  calculateVolumeStatsFromTrades,
   type PriceHistory,
   type VolumeStats,
 } from '../types/lending-oracle';
@@ -49,7 +48,6 @@ export class MexcPriceMonitor {
   private pingInterval: number | null = null;
   private trades: MarketTrade[] = [];
   private priceHistory: PriceHistory = createPriceHistory();
-  private volumeStats: VolumeStats = createVolumeStats();
   private snapshotTimer: number | null = null;
   private currentPrice: number = 0;
   private lastUpdate: number = 0;
@@ -158,6 +156,9 @@ export class MexcPriceMonitor {
     this.currentPrice = data.lastPrice;
     this.lastUpdate = Date.now();
 
+    // Phase 1: Calculate volume stats from 60-second window trades
+    const volumeStats = calculateVolumeStatsFromTrades(this.trades);
+
     const priceData: MexcPriceData = {
       exchange: 'MEXC',
       type: 'F', // Futures
@@ -167,7 +168,7 @@ export class MexcPriceMonitor {
       lastUpdate: this.lastUpdate,
       trades: [...this.trades],
       priceHistory: this.priceHistory,
-      volumeStats: this.volumeStats,
+      volumeStats,
     };
 
     this.onDataCallback?.(priceData);
@@ -182,9 +183,6 @@ export class MexcPriceMonitor {
       };
 
       this.trades.push(trade);
-
-      // Phase 1: Update volume statistics
-      updateVolumeStats(this.volumeStats, deal.v, Date.now());
     });
 
     // 古いデータをクリーンアップ
@@ -204,7 +202,6 @@ export class MexcPriceMonitor {
     this.ws = null;
     this.trades = [];
     this.priceHistory = createPriceHistory();
-    this.volumeStats = createVolumeStats();
     this.onDataCallback = null;
     this.onErrorCallback = null;
   }

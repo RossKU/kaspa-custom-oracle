@@ -79,12 +79,13 @@ export function LendingOracleTab({
     if (!binanceData) return;
 
     const snapshotCount = binanceData.priceHistory?.snapshots?.length || 0;
-    const volumeSamples = binanceData.volumeStats?.sampleCount || 0;
+    const tradesIn60s = binanceData.volumeStats?.sampleCount || 0;
+    const avgVolume = binanceData.volumeStats?.mean || 0;
 
     if (prevDataRef.current.binance === undefined) {
       addLog('Binance', 'success', `Connected - Phase 1 collection started`);
-    } else if (snapshotCount > 0 && snapshotCount % 50 === 0 && snapshotCount !== prevDataRef.current.binance) {
-      addLog('Binance', 'info', `Snapshots: ${snapshotCount}, Volume samples: ${volumeSamples}`);
+    } else if (snapshotCount > 0 && snapshotCount % 100 === 0 && snapshotCount !== prevDataRef.current.binance) {
+      addLog('Binance', 'info', `Snapshots: ${snapshotCount} | 60s window: ${tradesIn60s} trades, avg volume: ${avgVolume.toFixed(2)} KAS`);
     }
 
     prevDataRef.current.binance = snapshotCount;
@@ -95,12 +96,13 @@ export function LendingOracleTab({
     if (!mexcData) return;
 
     const snapshotCount = mexcData.priceHistory?.snapshots?.length || 0;
-    const volumeSamples = mexcData.volumeStats?.sampleCount || 0;
+    const tradesIn60s = mexcData.volumeStats?.sampleCount || 0;
+    const avgVolume = mexcData.volumeStats?.mean || 0;
 
     if (prevDataRef.current.mexc === undefined) {
       addLog('MEXC', 'success', `Connected - Phase 1 collection started`);
-    } else if (snapshotCount > 0 && snapshotCount % 50 === 0 && snapshotCount !== prevDataRef.current.mexc) {
-      addLog('MEXC', 'info', `Snapshots: ${snapshotCount}, Volume samples: ${volumeSamples}`);
+    } else if (snapshotCount > 0 && snapshotCount % 100 === 0 && snapshotCount !== prevDataRef.current.mexc) {
+      addLog('MEXC', 'info', `Snapshots: ${snapshotCount} | 60s window: ${tradesIn60s} trades, avg volume: ${avgVolume.toFixed(2)} KAS`);
     }
 
     prevDataRef.current.mexc = snapshotCount;
@@ -179,9 +181,15 @@ export function LendingOracleTab({
                       </span>
                     </div>
                     <div className="stat-item">
-                      <span className="stat-label">Volume Stats:</span>
+                      <span className="stat-label">60s Trades:</span>
                       <span className="stat-value">
-                        {ex.data.volumeStats?.sampleCount || 0} samples
+                        {ex.data.volumeStats?.sampleCount || 0} trades
+                      </span>
+                    </div>
+                    <div className="stat-item">
+                      <span className="stat-label">Avg Volume:</span>
+                      <span className="stat-value">
+                        {ex.data.volumeStats?.mean?.toFixed(2) || '0'} KAS
                       </span>
                     </div>
                     <div className="stat-item">
