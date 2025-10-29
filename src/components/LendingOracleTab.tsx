@@ -67,6 +67,40 @@ export function LendingOracleTab({
     });
   };
 
+  const exportLogs = () => {
+    const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+    const filename = `lending-oracle-logs-${timestamp}.txt`;
+
+    const logText = [
+      '='.repeat(80),
+      'Lending Oracle - Phase 1 Debug Logs',
+      `Exported: ${new Date().toLocaleString()}`,
+      `Total Logs: ${debugLogs.length}`,
+      '='.repeat(80),
+      '',
+      ...debugLogs.map(log => {
+        const time = new Date(log.timestamp).toLocaleTimeString();
+        const level = log.level.toUpperCase().padEnd(7);
+        const exchange = log.exchange.padEnd(10);
+        return `[${time}] [${level}] [${exchange}] ${log.message}`;
+      }),
+      '',
+      '='.repeat(80),
+      'End of logs',
+      '='.repeat(80),
+    ].join('\n');
+
+    const blob = new Blob([logText], { type: 'text/plain' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  };
+
   // Auto-scroll to bottom
   useEffect(() => {
     if (autoScroll && logContainerRef.current) {
@@ -107,6 +141,40 @@ export function LendingOracleTab({
 
     prevDataRef.current.mexc = snapshotCount;
   }, [mexcData]);
+
+  // Monitor Bybit data changes
+  useEffect(() => {
+    if (!bybitData) return;
+
+    const snapshotCount = bybitData.priceHistory?.snapshots?.length || 0;
+    const tradesIn60s = bybitData.volumeStats?.sampleCount || 0;
+    const avgVolume = bybitData.volumeStats?.mean || 0;
+
+    if (prevDataRef.current.bybit === undefined) {
+      addLog('Bybit', 'success', `Connected - Phase 1 collection started`);
+    } else if (snapshotCount > 0 && snapshotCount % 100 === 0 && snapshotCount !== prevDataRef.current.bybit) {
+      addLog('Bybit', 'info', `Snapshots: ${snapshotCount} | 60s window: ${tradesIn60s} trades, avg volume: ${avgVolume.toFixed(2)} KAS`);
+    }
+
+    prevDataRef.current.bybit = snapshotCount;
+  }, [bybitData]);
+
+  // Monitor Gate.io data changes
+  useEffect(() => {
+    if (!gateioData) return;
+
+    const snapshotCount = gateioData.priceHistory?.snapshots?.length || 0;
+    const tradesIn60s = gateioData.volumeStats?.sampleCount || 0;
+    const avgVolume = gateioData.volumeStats?.mean || 0;
+
+    if (prevDataRef.current.gateio === undefined) {
+      addLog('Gate.io', 'success', `Connected - Phase 1 collection started`);
+    } else if (snapshotCount > 0 && snapshotCount % 100 === 0 && snapshotCount !== prevDataRef.current.gateio) {
+      addLog('Gate.io', 'info', `Snapshots: ${snapshotCount} | 60s window: ${tradesIn60s} trades, avg volume: ${avgVolume.toFixed(2)} KAS`);
+    }
+
+    prevDataRef.current.gateio = snapshotCount;
+  }, [gateioData]);
 
   return (
     <section className="tab-content">
@@ -244,6 +312,13 @@ export function LendingOracleTab({
                 onClick={() => setDebugLogs([])}
               >
                 Clear Logs
+              </button>
+              <button
+                className="debug-export-btn"
+                onClick={exportLogs}
+                disabled={debugLogs.length === 0}
+              >
+                Export .txt
               </button>
             </div>
           </div>
