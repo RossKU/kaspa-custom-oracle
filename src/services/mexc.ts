@@ -6,6 +6,7 @@ import {
   addSnapshot,
   calculateVolumeStatsFromTrades,
   type PriceHistory,
+  type VolumeStats,
 } from '../types/lending-oracle';
 
 const MEXC_WS_URL = 'wss://contract.mexc.com/edge';
