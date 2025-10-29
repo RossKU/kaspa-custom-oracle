@@ -12,9 +12,10 @@ import { ApiTab } from './components/ApiTab'
 import { TradeTab } from './components/TradeTab'
 import { SettingsTab } from './components/SettingsTab'
 import { DebugTab } from './components/DebugTab'
+import { LendingOracleTab } from './components/LendingOracleTab'
 import './App.css'
 
-type TabType = 'price' | 'api' | 'trade' | 'settings' | 'debug';
+type TabType = 'price' | 'lending' | 'api' | 'trade' | 'settings' | 'debug';
 
 function App() {
   const [activeTab, setActiveTab] = useState<TabType>('price')
@@ -279,6 +280,12 @@ function App() {
           📊 Price
         </button>
         <button
+          className={`tab-button ${activeTab === 'lending' ? 'active' : ''}`}
+          onClick={() => setActiveTab('lending')}
+        >
+          🏦 Lending Oracle
+        </button>
+        <button
           className={`tab-button ${activeTab === 'api' ? 'active' : ''}`}
           onClick={() => setActiveTab('api')}
         >
@@ -315,6 +322,16 @@ function App() {
             bingxData={bingxData}
             isConnecting={isConnecting}
             error={error}
+          />
+        )}
+        {activeTab === 'lending' && (
+          <LendingOracleTab
+            binanceData={binanceData}
+            mexcData={mexcData}
+            bybitData={bybitData}
+            gateioData={gateioData}
+            kucoinData={kucoinData}
+            bingxData={bingxData}
           />
         )}
         {activeTab === 'api' && <ApiTab />}
