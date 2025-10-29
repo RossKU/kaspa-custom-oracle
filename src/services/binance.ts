@@ -6,7 +6,6 @@ import {
   addSnapshot,
   calculateVolumeStatsFromTrades,
   type PriceHistory,
-  type VolumeStats,
 } from '../types/lending-oracle';
 
 const BINANCE_WS_BASE = 'wss://fstream.binance.com/ws';
