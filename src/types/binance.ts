@@ -26,6 +26,7 @@ export interface BinanceOrderBook {
 }
 
 import type { MarketTrade } from './oracle';
+import type { PriceHistory, VolumeStats } from './lending-oracle';
 
 export interface PriceData {
   symbol: string;
@@ -39,4 +40,8 @@ export interface PriceData {
   bestBid: number;
   bestAsk: number;
   trades: MarketTrade[]; // VWAP計算用の取引履歴
+
+  // Phase 1: Lending Oracle data collection
+  priceHistory?: PriceHistory; // 価格履歴（100ms間隔）
+  volumeStats?: VolumeStats; // 出来高統計
 }

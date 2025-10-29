@@ -1,9 +1,18 @@
 import type { PriceData } from '../types/binance';
 import type { MarketTrade } from '../types/oracle';
 import { cleanupOldTrades } from '../types/oracle';
+import {
+  createPriceHistory,
+  createVolumeStats,
+  addSnapshot,
+  updateVolumeStats,
+  type PriceHistory,
+  type VolumeStats,
+} from '../types/lending-oracle';
 
 const BINANCE_WS_BASE = 'wss://fstream.binance.com/ws';
 const TRADE_WINDOW_MS = 60000; // 60秒の取引履歴を保持
+const SNAPSHOT_INTERVAL_MS = 100; // 100ms間隔でスナップショット
 
 export class BinancePriceMonitor {
   private ws: WebSocket | null = null;
@@ -13,6 +22,12 @@ export class BinancePriceMonitor {
   private onErrorCallback: ((error: string) => void) | null = null;
   private currentData: Partial<PriceData> = {};
   private trades: MarketTrade[] = []; // 取引履歴
+
+  // Phase 1: Lending Oracle data collection
+  private priceHistory: PriceHistory = createPriceHistory();
+  private volumeStats: VolumeStats = createVolumeStats();
+  private snapshotTimer: number | null = null;
+  private lastSnapshotTime: number = 0;
 
   connect(
     onData: (data: PriceData) => void,
@@ -112,6 +127,10 @@ export class BinancePriceMonitor {
         // 古いデータをクリーンアップ
         cleanupOldTrades(this.trades, TRADE_WINDOW_MS);
 
+        // Phase 1: Update volume statistics
+        const volume = parseFloat(data.q);
+        updateVolumeStats(this.volumeStats, volume, Date.now());
+
         this.emitData();
       } catch (error) {
         // Silent error
@@ -130,6 +149,39 @@ export class BinancePriceMonitor {
         }
       }, 5000);
     };
+
+    // Phase 1: Start snapshot timer (100ms interval)
+    this.startSnapshotTimer();
+  }
+
+  private startSnapshotTimer() {
+    // Cancel existing timer
+    if (this.snapshotTimer !== null) {
+      clearInterval(this.snapshotTimer);
+    }
+
+    this.snapshotTimer = window.setInterval(() => {
+      this.recordSnapshot();
+    }, SNAPSHOT_INTERVAL_MS);
+  }
+
+  private recordSnapshot() {
+    const now = Date.now();
+
+    // Skip if no price data yet or too soon since last snapshot
+    if (!this.currentData.price || now - this.lastSnapshotTime < SNAPSHOT_INTERVAL_MS - 10) {
+      return;
+    }
+
+    // Record snapshot with high-precision timestamps
+    addSnapshot(this.priceHistory, {
+      price: this.currentData.price,
+      clientTimestamp: now,
+      serverTimestamp: this.currentData.lastUpdate || now,
+      volume: this.trades.length > 0 ? this.trades[this.trades.length - 1].volume : undefined,
+    });
+
+    this.lastSnapshotTime = now;
   }
 
   private emitData() {
@@ -142,12 +194,21 @@ export class BinancePriceMonitor {
     ) {
       this.onDataCallback?.({
         ...this.currentData,
-        trades: [...this.trades] // コピーを渡す
+        trades: [...this.trades], // コピーを渡す
+        // Phase 1: Include lending oracle data
+        priceHistory: this.priceHistory,
+        volumeStats: this.volumeStats,
       } as PriceData);
     }
   }
 
   disconnect() {
+    // Stop snapshot timer
+    if (this.snapshotTimer !== null) {
+      clearInterval(this.snapshotTimer);
+      this.snapshotTimer = null;
+    }
+
     this.ws?.close();
     this.bookTickerWs?.close();
     this.aggTradeWs?.close();
@@ -155,6 +216,12 @@ export class BinancePriceMonitor {
     this.bookTickerWs = null;
     this.aggTradeWs = null;
     this.trades = [];
+
+    // Phase 1: Reset lending oracle data
+    this.priceHistory = createPriceHistory();
+    this.volumeStats = createVolumeStats();
+    this.lastSnapshotTime = 0;
+
     this.onDataCallback = null;
     this.onErrorCallback = null;
   }

@@ -1,9 +1,18 @@
 // MEXC Futures WebSocket
 import type { MarketTrade } from '../types/oracle';
 import { cleanupOldTrades } from '../types/oracle';
+import {
+  createPriceHistory,
+  createVolumeStats,
+  addSnapshot,
+  updateVolumeStats,
+  type PriceHistory,
+  type VolumeStats,
+} from '../types/lending-oracle';
 
 const MEXC_WS_URL = 'wss://contract.mexc.com/edge';
 const TRADE_WINDOW_MS = 60000; // 60秒の取引履歴を保持
+const SNAPSHOT_INTERVAL_MS = 100; // 100ms間隔でスナップショット
 
 interface MexcTickerData {
   ask1: number;
@@ -29,6 +38,8 @@ export interface MexcPriceData {
   ask: number;
   lastUpdate: number;
   trades: MarketTrade[];
+  priceHistory?: PriceHistory;
+  volumeStats?: VolumeStats;
 }
 
 export class MexcPriceMonitor {
@@ -37,6 +48,12 @@ export class MexcPriceMonitor {
   private onErrorCallback: ((error: string) => void) | null = null;
   private pingInterval: number | null = null;
   private trades: MarketTrade[] = [];
+  private priceHistory: PriceHistory = createPriceHistory();
+  private volumeStats: VolumeStats = createVolumeStats();
+  private snapshotTimer: number | null = null;
+  private lastSnapshotTime: number = 0;
+  private currentPrice: number = 0;
+  private lastUpdate: number = 0;
 
   connect(
     onData: (data: MexcPriceData) => void,
@@ -91,6 +108,25 @@ export class MexcPriceMonitor {
         }
       }, 5000);
     };
+
+    // Phase 1: Start snapshot timer
+    this.startSnapshotTimer();
+  }
+
+  private startSnapshotTimer() {
+    if (this.snapshotTimer !== null) {
+      clearInterval(this.snapshotTimer);
+    }
+    this.snapshotTimer = window.setInterval(() => {
+      if (this.currentPrice > 0) {
+        addSnapshot(this.priceHistory, {
+          price: this.currentPrice,
+          clientTimestamp: Date.now(),
+          serverTimestamp: this.lastUpdate,
+        });
+        this.lastSnapshotTime = Date.now();
+      }
+    }, SNAPSHOT_INTERVAL_MS);
   }
 
   private subscribeTicker() {
@@ -121,14 +157,19 @@ export class MexcPriceMonitor {
   }
 
   private handleTickerData(data: MexcTickerData) {
+    this.currentPrice = data.lastPrice;
+    this.lastUpdate = Date.now();
+
     const priceData: MexcPriceData = {
       exchange: 'MEXC',
       type: 'F', // Futures
       price: data.lastPrice,
       bid: data.bid1,
       ask: data.ask1,
-      lastUpdate: Date.now(),
-      trades: [...this.trades]
+      lastUpdate: this.lastUpdate,
+      trades: [...this.trades],
+      priceHistory: this.priceHistory,
+      volumeStats: this.volumeStats,
     };
 
     this.onDataCallback?.(priceData);
@@ -143,11 +184,13 @@ export class MexcPriceMonitor {
       };
 
       this.trades.push(trade);
+
+      // Phase 1: Update volume statistics
+      updateVolumeStats(this.volumeStats, deal.v, Date.now());
     });
 
     // 古いデータをクリーンアップ
     cleanupOldTrades(this.trades, TRADE_WINDOW_MS);
-
   }
 
   disconnect() {
@@ -155,9 +198,15 @@ export class MexcPriceMonitor {
       clearInterval(this.pingInterval);
       this.pingInterval = null;
     }
+    if (this.snapshotTimer !== null) {
+      clearInterval(this.snapshotTimer);
+      this.snapshotTimer = null;
+    }
     this.ws?.close();
     this.ws = null;
     this.trades = [];
+    this.priceHistory = createPriceHistory();
+    this.volumeStats = createVolumeStats();
     this.onDataCallback = null;
     this.onErrorCallback = null;
   }

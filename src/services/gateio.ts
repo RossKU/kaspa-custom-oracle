@@ -32,6 +32,8 @@ export interface GateioPriceData {
   ask: number;
   lastUpdate: number;
   trades: MarketTrade[];
+  priceHistory?: any; // Phase 1: Will be implemented
+  volumeStats?: any; // Phase 1: Will be implemented
 }
 
 export class GateioPriceMonitor {

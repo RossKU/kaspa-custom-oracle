@@ -101,9 +101,15 @@ export function LendingOracleTab({
                 {ex.data && (
                   <div className="exchange-collection-stats">
                     <div className="stat-item">
-                      <span className="stat-label">Price History:</span>
+                      <span className="stat-label">Snapshots:</span>
                       <span className="stat-value">
-                        {ex.data.trades?.length || 0} snapshots
+                        {ex.data.priceHistory?.snapshots?.length || 0}
+                      </span>
+                    </div>
+                    <div className="stat-item">
+                      <span className="stat-label">Volume Stats:</span>
+                      <span className="stat-value">
+                        {ex.data.volumeStats?.sampleCount || 0} samples
                       </span>
                     </div>
                     <div className="stat-item">
