@@ -259,6 +259,7 @@ function App() {
   // Phase 2A: Periodic correlation calculation (every 30 seconds)
   useEffect(() => {
     const calculateCorrelation = () => {
+      // データを現在のstateから直接参照
       const exchanges = new Map<string, { priceHistory: any; volumeStats?: any; lastUpdate: number }>();
 
       if (binanceData?.priceHistory) {
@@ -322,7 +323,8 @@ function App() {
       clearTimeout(initialTimer);
       clearInterval(intervalTimer);
     };
-  }, [binanceData, mexcData, bybitData, gateioData, kucoinData, bingxData]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // 空の依存配列: マウント時に一度だけ実行
 
   return (
     <div className="app">
