@@ -45,6 +45,7 @@ function App() {
 
   // Phase 2A: Correlation Engine
   const [correlationMatrix, setCorrelationMatrix] = useState<CorrelationMatrix | null>(null)
+  const [correlationLogs, setCorrelationLogs] = useState<Array<{timestamp: number; level: string; message: string}>>([])
   const correlationEngineRef = useRef(new CorrelationEngine())
 
   // WebSocket management state for Trade Tab
@@ -305,11 +306,9 @@ function App() {
 
       // 最低2取引所のデータが必要
       if (exchanges.size >= 2) {
-        console.log('[App] Starting Phase 2A correlation calculation...');
-        const matrix = correlationEngineRef.current.calculateCorrelationMatrix(exchanges);
-        setCorrelationMatrix(matrix);
-      } else {
-        console.log(`[App] Skipping correlation calculation (only ${exchanges.size}/2 exchanges ready)`);
+        const result = correlationEngineRef.current.calculateCorrelationMatrix(exchanges);
+        setCorrelationMatrix(result.matrix);
+        setCorrelationLogs(prevLogs => [...prevLogs, ...result.logs]);
       }
     };
 
@@ -409,6 +408,7 @@ function App() {
             kucoinData={kucoinData}
             bingxData={bingxData}
             correlationMatrix={correlationMatrix}
+            correlationLogs={correlationLogs}
           />
         )}
         {activeTab === 'api' && <ApiTab />}

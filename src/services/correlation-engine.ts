@@ -27,14 +27,43 @@ interface ExchangeData {
 }
 
 /**
+ * ログエントリー
+ */
+export interface CorrelationLogEntry {
+  timestamp: number;
+  level: 'info' | 'success' | 'warning' | 'error';
+  message: string;
+}
+
+/**
+ * 相関計算結果（ログ付き）
+ */
+export interface CorrelationCalculationResult {
+  matrix: CorrelationMatrix;
+  logs: CorrelationLogEntry[];
+}
+
+/**
  * 相関計算エンジン
  */
 export class CorrelationEngine {
   private config: CalibrationConfig;
   private lastMatrix: CorrelationMatrix | null = null;
+  private logs: CorrelationLogEntry[] = [];
 
   constructor(config?: Partial<CalibrationConfig>) {
     this.config = { ...DEFAULT_CALIBRATION_CONFIG, ...config };
+  }
+
+  /**
+   * ログを追加
+   */
+  private addLog(level: 'info' | 'success' | 'warning' | 'error', message: string) {
+    this.logs.push({
+      timestamp: Date.now(),
+      level,
+      message,
+    });
   }
 
   /**
@@ -51,8 +80,13 @@ export class CorrelationEngine {
    */
   calculateCorrelationMatrix(
     exchanges: Map<string, ExchangeData>
-  ): CorrelationMatrix {
+  ): CorrelationCalculationResult {
     const startTime = Date.now();
+
+    // ログをクリア
+    this.logs = [];
+
+    this.addLog('info', `Starting correlation calculation for ${exchanges.size} exchanges`);
 
     // Step 1: 健全な取引所をフィルタ & 価格変化率を計算
     const healthyExchanges: string[] = [];
@@ -64,9 +98,7 @@ export class CorrelationEngine {
       // 健全性チェック
       if (!this.isExchangeHealthy(data.lastUpdate)) {
         const timeSinceUpdate = ((Date.now() - data.lastUpdate) / 1000).toFixed(1);
-        console.warn(
-          `[Phase 2A] ⚠️ ${name}: Not healthy (last update: ${timeSinceUpdate}s ago)`
-        );
+        this.addLog('warning', `${name}: Not healthy (last update: ${timeSinceUpdate}s ago)`);
         return;
       }
 
@@ -74,9 +106,7 @@ export class CorrelationEngine {
       const returns = calculatePriceReturns(data.priceHistory.snapshots, name);
 
       if (!returns || returns.sampleCount < this.config.minSampleSize) {
-        console.warn(
-          `[Phase 2A] ⚠️ ${name}: Insufficient samples (${returns?.sampleCount || 0} < ${this.config.minSampleSize})`
-        );
+        this.addLog('warning', `${name}: Insufficient samples (${returns?.sampleCount || 0} < ${this.config.minSampleSize})`);
         return;
       }
 
@@ -90,18 +120,19 @@ export class CorrelationEngine {
       exchangeSnapshots.set(name, data.priceHistory.snapshots.length);
     });
 
-    console.log(
-      `[Phase 2A] Healthy exchanges: ${healthyExchanges.length}/${exchanges.size} - [${healthyExchanges.join(', ')}]`
-    );
+    this.addLog('info', `Healthy exchanges: ${healthyExchanges.length}/${exchanges.size} [${healthyExchanges.join(', ')}]`);
 
     // Step 2: 最低2取引所必要
     if (healthyExchanges.length < 2) {
-      console.warn('[Phase 2A] ⚠️ Insufficient healthy exchanges (need at least 2)');
+      this.addLog('warning', `Insufficient healthy exchanges (need at least 2, got ${healthyExchanges.length})`);
       return {
-        results: [],
-        healthyExchanges: [],
-        averageCorrelation: 0,
-        timestamp: Date.now(),
+        matrix: {
+          results: [],
+          healthyExchanges: [],
+          averageCorrelation: 0,
+          timestamp: Date.now(),
+        },
+        logs: this.logs,
       };
     }
 
@@ -119,7 +150,7 @@ export class CorrelationEngine {
         const returnsA = exchangeReturns.get(exchangeA)!;
         const returnsB = exchangeReturns.get(exchangeB)!;
 
-        console.log(`[Phase 2A] Calculating correlation: ${exchangeA} ↔ ${exchangeB}...`);
+        this.addLog('info', `Calculating: ${exchangeA} ↔ ${exchangeB}`);
 
         const result = this.calculatePairCorrelation(
           exchangeA,
@@ -136,8 +167,9 @@ export class CorrelationEngine {
 
         results.push(result);
 
-        console.log(
-          `[Phase 2A]   → r=${result.correlation.toFixed(3)}, offset=${result.optimalOffsetMs > 0 ? '+' : ''}${result.optimalOffsetMs}ms, weight=${result.weight.toFixed(3)}`
+        this.addLog(
+          'info',
+          `${exchangeA} ↔ ${exchangeB}: r=${result.correlation.toFixed(3)}, offset=${result.optimalOffsetMs > 0 ? '+' : ''}${result.optimalOffsetMs}ms, weight=${result.weight.toFixed(3)}`
         );
       }
     }
@@ -162,11 +194,15 @@ export class CorrelationEngine {
     this.lastMatrix = matrix;
 
     const elapsedMs = Date.now() - startTime;
-    console.log(
-      `[Phase 2A] ✅ Calculated ${results.length} pairs in ${elapsedMs}ms, avg correlation: ${averageCorrelation.toFixed(3)}`
+    this.addLog(
+      'success',
+      `Calculated ${results.length} pairs in ${elapsedMs}ms, avg correlation: ${averageCorrelation.toFixed(3)}`
     );
 
-    return matrix;
+    return {
+      matrix,
+      logs: this.logs,
+    };
   }
 
   /**

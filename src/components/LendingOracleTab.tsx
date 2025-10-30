@@ -22,6 +22,7 @@ interface LendingOracleTabProps {
   kucoinData: KucoinPriceData | null;
   bingxData: BingXPriceData | null;
   correlationMatrix: CorrelationMatrix | null;
+  correlationLogs: Array<{timestamp: number; level: string; message: string}>;
 }
 
 export function LendingOracleTab({
@@ -32,6 +33,7 @@ export function LendingOracleTab({
   kucoinData,
   bingxData,
   correlationMatrix,
+  correlationLogs,
 }: LendingOracleTabProps) {
   const [debugLogs, setDebugLogs] = useState<DebugLogEntry[]>([]);
   const [autoScroll, setAutoScroll] = useState(true);
@@ -74,19 +76,36 @@ export function LendingOracleTab({
     const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
     const filename = `lending-oracle-logs-${timestamp}.txt`;
 
+    const phase1Logs = debugLogs.map(log => {
+      const time = new Date(log.timestamp).toLocaleTimeString();
+      const level = log.level.toUpperCase().padEnd(7);
+      const exchange = log.exchange.padEnd(10);
+      return `[${time}] [${level}] [${exchange}] ${log.message}`;
+    });
+
+    const phase2Logs = correlationLogs.map(log => {
+      const time = new Date(log.timestamp).toLocaleTimeString();
+      const level = log.level.toUpperCase().padEnd(7);
+      const source = 'Phase 2A'.padEnd(10);
+      return `[${time}] [${level}] [${source}] ${log.message}`;
+    });
+
     const logText = [
       '='.repeat(80),
-      'Lending Oracle - Phase 1 Debug Logs',
+      'Lending Oracle - Debug Logs',
       `Exported: ${new Date().toLocaleString()}`,
-      `Total Logs: ${debugLogs.length}`,
+      `Phase 1 Logs: ${debugLogs.length}`,
+      `Phase 2A Logs: ${correlationLogs.length}`,
+      `Total Logs: ${debugLogs.length + correlationLogs.length}`,
       '='.repeat(80),
       '',
-      ...debugLogs.map(log => {
-        const time = new Date(log.timestamp).toLocaleTimeString();
-        const level = log.level.toUpperCase().padEnd(7);
-        const exchange = log.exchange.padEnd(10);
-        return `[${time}] [${level}] [${exchange}] ${log.message}`;
-      }),
+      '--- Phase 1: Data Collection ---',
+      '',
+      ...phase1Logs,
+      '',
+      '--- Phase 2A: Correlation Calculation ---',
+      '',
+      ...phase2Logs,
       '',
       '='.repeat(80),
       'End of logs',
@@ -353,7 +372,7 @@ export function LendingOracleTab({
               <button
                 className="debug-export-btn"
                 onClick={exportLogs}
-                disabled={debugLogs.length === 0}
+                disabled={debugLogs.length === 0 && correlationLogs.length === 0}
               >
                 Export .txt
               </button>
