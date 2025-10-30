@@ -259,6 +259,31 @@ function App() {
   // Phase 2A: Periodic correlation calculation (every 30 seconds)
   useEffect(() => {
     const calculateCorrelation = () => {
+      // デバッグログ: 関数実行を記録
+      const debugLog = {
+        timestamp: Date.now(),
+        level: 'info' as const,
+        message: `[DEBUG] calculateCorrelation() called`,
+      };
+      setCorrelationLogs(prevLogs => [...prevLogs, debugLog]);
+
+      // データ状態チェック
+      const dataStatus = {
+        binance: binanceData ? (binanceData.priceHistory ? `OK (${binanceData.priceHistory.snapshots.length} snapshots)` : 'NO_HISTORY') : 'NULL',
+        mexc: mexcData ? (mexcData.priceHistory ? `OK (${mexcData.priceHistory.snapshots.length} snapshots)` : 'NO_HISTORY') : 'NULL',
+        bybit: bybitData ? (bybitData.priceHistory ? `OK (${bybitData.priceHistory.snapshots.length} snapshots)` : 'NO_HISTORY') : 'NULL',
+        gateio: gateioData ? (gateioData.priceHistory ? `OK (${gateioData.priceHistory.snapshots.length} snapshots)` : 'NO_HISTORY') : 'NULL',
+        kucoin: kucoinData ? (kucoinData.priceHistory ? `OK (${kucoinData.priceHistory.snapshots.length} snapshots)` : 'NO_HISTORY') : 'NULL',
+        bingx: bingxData ? (bingxData.priceHistory ? `OK (${bingxData.priceHistory.snapshots.length} snapshots)` : 'NO_HISTORY') : 'NULL',
+      };
+
+      const statusLog = {
+        timestamp: Date.now(),
+        level: 'info' as const,
+        message: `[DEBUG] Data status: Binance=${dataStatus.binance}, MEXC=${dataStatus.mexc}, Bybit=${dataStatus.bybit}, Gate.io=${dataStatus.gateio}, Kucoin=${dataStatus.kucoin}, BingX=${dataStatus.bingx}`,
+      };
+      setCorrelationLogs(prevLogs => [...prevLogs, statusLog]);
+
       // データを現在のstateから直接参照
       const exchanges = new Map<string, { priceHistory: any; volumeStats?: any; lastUpdate: number }>();
 
@@ -305,11 +330,33 @@ function App() {
         });
       }
 
+      // デバッグログ: exchanges.size
+      const sizeLog = {
+        timestamp: Date.now(),
+        level: 'info' as const,
+        message: `[DEBUG] exchanges.size = ${exchanges.size} (need >= 2)`,
+      };
+      setCorrelationLogs(prevLogs => [...prevLogs, sizeLog]);
+
       // 最低2取引所のデータが必要
       if (exchanges.size >= 2) {
+        const conditionLog = {
+          timestamp: Date.now(),
+          level: 'success' as const,
+          message: `[DEBUG] Condition met (${exchanges.size} >= 2), executing correlation calculation`,
+        };
+        setCorrelationLogs(prevLogs => [...prevLogs, conditionLog]);
+
         const result = correlationEngineRef.current.calculateCorrelationMatrix(exchanges);
         setCorrelationMatrix(result.matrix);
         setCorrelationLogs(prevLogs => [...prevLogs, ...result.logs]);
+      } else {
+        const skipLog = {
+          timestamp: Date.now(),
+          level: 'warning' as const,
+          message: `[DEBUG] Skipping correlation calculation (only ${exchanges.size}/2 exchanges ready)`,
+        };
+        setCorrelationLogs(prevLogs => [...prevLogs, skipLog]);
       }
     };
 
