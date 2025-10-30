@@ -48,6 +48,39 @@ function App() {
   const [correlationLogs, setCorrelationLogs] = useState<Array<{timestamp: number; level: string; message: string}>>([])
   const correlationEngineRef = useRef(new CorrelationEngine())
 
+  // Phase 2A: Refs to always access latest data (avoid closure stale data)
+  const binanceDataRef = useRef(binanceData)
+  const mexcDataRef = useRef(mexcData)
+  const bybitDataRef = useRef(bybitData)
+  const gateioDataRef = useRef(gateioData)
+  const kucoinDataRef = useRef(kucoinData)
+  const bingxDataRef = useRef(bingxData)
+
+  // Update refs when data changes
+  useEffect(() => {
+    binanceDataRef.current = binanceData
+  }, [binanceData])
+
+  useEffect(() => {
+    mexcDataRef.current = mexcData
+  }, [mexcData])
+
+  useEffect(() => {
+    bybitDataRef.current = bybitData
+  }, [bybitData])
+
+  useEffect(() => {
+    gateioDataRef.current = gateioData
+  }, [gateioData])
+
+  useEffect(() => {
+    kucoinDataRef.current = kucoinData
+  }, [kucoinData])
+
+  useEffect(() => {
+    bingxDataRef.current = bingxData
+  }, [bingxData])
+
   // WebSocket management state for Trade Tab
   const [tradeMonitoringActive, setTradeMonitoringActive] = useState(false)
   const [activeExchanges, setActiveExchanges] = useState<string[]>([])
@@ -267,14 +300,14 @@ function App() {
       };
       setCorrelationLogs(prevLogs => [...prevLogs, debugLog]);
 
-      // データ状態チェック
+      // データ状態チェック（refから最新データ取得）
       const dataStatus = {
-        binance: binanceData ? (binanceData.priceHistory ? `OK (${binanceData.priceHistory.snapshots.length} snapshots)` : 'NO_HISTORY') : 'NULL',
-        mexc: mexcData ? (mexcData.priceHistory ? `OK (${mexcData.priceHistory.snapshots.length} snapshots)` : 'NO_HISTORY') : 'NULL',
-        bybit: bybitData ? (bybitData.priceHistory ? `OK (${bybitData.priceHistory.snapshots.length} snapshots)` : 'NO_HISTORY') : 'NULL',
-        gateio: gateioData ? (gateioData.priceHistory ? `OK (${gateioData.priceHistory.snapshots.length} snapshots)` : 'NO_HISTORY') : 'NULL',
-        kucoin: kucoinData ? (kucoinData.priceHistory ? `OK (${kucoinData.priceHistory.snapshots.length} snapshots)` : 'NO_HISTORY') : 'NULL',
-        bingx: bingxData ? (bingxData.priceHistory ? `OK (${bingxData.priceHistory.snapshots.length} snapshots)` : 'NO_HISTORY') : 'NULL',
+        binance: binanceDataRef.current ? (binanceDataRef.current.priceHistory ? `OK (${binanceDataRef.current.priceHistory.snapshots.length} snapshots)` : 'NO_HISTORY') : 'NULL',
+        mexc: mexcDataRef.current ? (mexcDataRef.current.priceHistory ? `OK (${mexcDataRef.current.priceHistory.snapshots.length} snapshots)` : 'NO_HISTORY') : 'NULL',
+        bybit: bybitDataRef.current ? (bybitDataRef.current.priceHistory ? `OK (${bybitDataRef.current.priceHistory.snapshots.length} snapshots)` : 'NO_HISTORY') : 'NULL',
+        gateio: gateioDataRef.current ? (gateioDataRef.current.priceHistory ? `OK (${gateioDataRef.current.priceHistory.snapshots.length} snapshots)` : 'NO_HISTORY') : 'NULL',
+        kucoin: kucoinDataRef.current ? (kucoinDataRef.current.priceHistory ? `OK (${kucoinDataRef.current.priceHistory.snapshots.length} snapshots)` : 'NO_HISTORY') : 'NULL',
+        bingx: bingxDataRef.current ? (bingxDataRef.current.priceHistory ? `OK (${bingxDataRef.current.priceHistory.snapshots.length} snapshots)` : 'NO_HISTORY') : 'NULL',
       };
 
       const statusLog = {
@@ -284,49 +317,49 @@ function App() {
       };
       setCorrelationLogs(prevLogs => [...prevLogs, statusLog]);
 
-      // データを現在のstateから直接参照
+      // データをrefから取得（常に最新データにアクセス）
       const exchanges = new Map<string, { priceHistory: any; volumeStats?: any; lastUpdate: number }>();
 
-      if (binanceData?.priceHistory) {
+      if (binanceDataRef.current?.priceHistory) {
         exchanges.set('Binance', {
-          priceHistory: binanceData.priceHistory,
-          volumeStats: binanceData.volumeStats,
-          lastUpdate: binanceData.lastUpdate,
+          priceHistory: binanceDataRef.current.priceHistory,
+          volumeStats: binanceDataRef.current.volumeStats,
+          lastUpdate: binanceDataRef.current.lastUpdate,
         });
       }
-      if (mexcData?.priceHistory) {
+      if (mexcDataRef.current?.priceHistory) {
         exchanges.set('MEXC', {
-          priceHistory: mexcData.priceHistory,
-          volumeStats: mexcData.volumeStats,
-          lastUpdate: mexcData.lastUpdate,
+          priceHistory: mexcDataRef.current.priceHistory,
+          volumeStats: mexcDataRef.current.volumeStats,
+          lastUpdate: mexcDataRef.current.lastUpdate,
         });
       }
-      if (bybitData?.priceHistory) {
+      if (bybitDataRef.current?.priceHistory) {
         exchanges.set('Bybit', {
-          priceHistory: bybitData.priceHistory,
-          volumeStats: bybitData.volumeStats,
-          lastUpdate: bybitData.lastUpdate,
+          priceHistory: bybitDataRef.current.priceHistory,
+          volumeStats: bybitDataRef.current.volumeStats,
+          lastUpdate: bybitDataRef.current.lastUpdate,
         });
       }
-      if (gateioData?.priceHistory) {
+      if (gateioDataRef.current?.priceHistory) {
         exchanges.set('Gate.io', {
-          priceHistory: gateioData.priceHistory,
-          volumeStats: gateioData.volumeStats,
-          lastUpdate: gateioData.lastUpdate,
+          priceHistory: gateioDataRef.current.priceHistory,
+          volumeStats: gateioDataRef.current.volumeStats,
+          lastUpdate: gateioDataRef.current.lastUpdate,
         });
       }
-      if (kucoinData?.priceHistory) {
+      if (kucoinDataRef.current?.priceHistory) {
         exchanges.set('Kucoin', {
-          priceHistory: kucoinData.priceHistory,
-          volumeStats: kucoinData.volumeStats,
-          lastUpdate: kucoinData.lastUpdate,
+          priceHistory: kucoinDataRef.current.priceHistory,
+          volumeStats: kucoinDataRef.current.volumeStats,
+          lastUpdate: kucoinDataRef.current.lastUpdate,
         });
       }
-      if (bingxData?.priceHistory) {
+      if (bingxDataRef.current?.priceHistory) {
         exchanges.set('BingX', {
-          priceHistory: bingxData.priceHistory,
-          volumeStats: bingxData.volumeStats,
-          lastUpdate: bingxData.lastUpdate,
+          priceHistory: bingxDataRef.current.priceHistory,
+          volumeStats: bingxDataRef.current.volumeStats,
+          lastUpdate: bingxDataRef.current.lastUpdate,
         });
       }
 
