@@ -5,6 +5,7 @@ import type { BybitPriceData } from '../services/bybit';
 import type { GateioPriceData } from '../services/gateio';
 import type { KucoinPriceData } from '../services/kucoin';
 import type { BingXPriceData } from '../services/bingx';
+import type { CorrelationMatrix } from '../types/correlation';
 
 interface DebugLogEntry {
   timestamp: number;
@@ -20,6 +21,7 @@ interface LendingOracleTabProps {
   gateioData: GateioPriceData | null;
   kucoinData: KucoinPriceData | null;
   bingxData: BingXPriceData | null;
+  correlationMatrix: CorrelationMatrix | null;
 }
 
 export function LendingOracleTab({
@@ -29,6 +31,7 @@ export function LendingOracleTab({
   gateioData,
   kucoinData,
   bingxData,
+  correlationMatrix,
 }: LendingOracleTabProps) {
   const [debugLogs, setDebugLogs] = useState<DebugLogEntry[]>([]);
   const [autoScroll, setAutoScroll] = useState(true);
@@ -375,6 +378,81 @@ export function LendingOracleTab({
             )}
           </div>
         </div>
+
+        {/* Phase 2A: Correlation Matrix */}
+        {correlationMatrix && correlationMatrix.results.length > 0 && (
+          <div className="correlation-section">
+            <h3>📊 Phase 2A: Correlation Matrix</h3>
+
+            {/* Summary */}
+            <div className="correlation-summary">
+              <div className="summary-item">
+                <span className="summary-label">Average Correlation:</span>
+                <span className="summary-value">{correlationMatrix.averageCorrelation.toFixed(3)}</span>
+              </div>
+              <div className="summary-item">
+                <span className="summary-label">Healthy Exchanges:</span>
+                <span className="summary-value">{correlationMatrix.healthyExchanges.length}/6</span>
+              </div>
+              <div className="summary-item">
+                <span className="summary-label">Pairs Calculated:</span>
+                <span className="summary-value">{correlationMatrix.results.length}</span>
+              </div>
+              <div className="summary-item">
+                <span className="summary-label">Updated:</span>
+                <span className="summary-value">{new Date(correlationMatrix.timestamp).toLocaleTimeString()}</span>
+              </div>
+            </div>
+
+            {/* Pairwise Results */}
+            <div className="correlation-pairs">
+              {correlationMatrix.results.map((result, index) => (
+                <div key={index} className="pair-card">
+                  <div className="pair-header">
+                    <span className="pair-name">{result.exchangeA} ↔ {result.exchangeB}</span>
+                  </div>
+                  <div className="pair-stats">
+                    <div className="pair-stat">
+                      <span className="stat-label">Correlation:</span>
+                      <span className={`stat-value ${result.correlation > 0.85 ? 'high' : result.correlation > 0.7 ? 'medium' : 'low'}`}>
+                        {result.correlation.toFixed(3)}
+                      </span>
+                    </div>
+                    <div className="pair-stat">
+                      <span className="stat-label">Offset:</span>
+                      <span className="stat-value">
+                        {result.optimalOffsetMs > 0 ? '+' : ''}{result.optimalOffsetMs}ms
+                      </span>
+                    </div>
+                    <div className="pair-stat">
+                      <span className="stat-label">Weight:</span>
+                      <span className="stat-value">{result.weight.toFixed(3)}</span>
+                    </div>
+                    <div className="pair-stat">
+                      <span className="stat-label">Samples:</span>
+                      <span className="stat-value">{result.sampleSize}</span>
+                    </div>
+                  </div>
+                  {/* Correlation bar */}
+                  <div className="correlation-bar-container">
+                    <div
+                      className="correlation-bar"
+                      style={{
+                        width: `${Math.abs(result.correlation) * 100}%`,
+                        background:
+                          result.correlation > 0.85
+                            ? '#28a745'
+                            : result.correlation > 0.7
+                            ? '#ffc107'
+                            : '#dc3545',
+                      }}
+                    />
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
     </section>
   );

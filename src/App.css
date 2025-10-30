@@ -1332,3 +1332,141 @@
     gap: 0.25rem;
   }
 }
+
+/* Phase 2A: Correlation Matrix Styles */
+.correlation-section {
+  margin-top: 2rem;
+  padding: 1.5rem;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+}
+
+.correlation-section h3 {
+  font-size: 1.3rem;
+  margin-bottom: 1.5rem;
+  color: var(--text-primary);
+}
+
+.correlation-summary {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2rem;
+  margin-bottom: 1.5rem;
+  padding: 1rem;
+  background: var(--bg-primary);
+  border-radius: 8px;
+}
+
+.summary-item {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.summary-label {
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+}
+
+.summary-value {
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.correlation-pairs {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  gap: 1rem;
+}
+
+.pair-card {
+  background: var(--bg-primary);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  padding: 1rem;
+  transition: all 0.3s ease;
+}
+
+.pair-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px var(--shadow);
+  border-color: var(--primary);
+}
+
+.pair-header {
+  margin-bottom: 0.75rem;
+  padding-bottom: 0.5rem;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.pair-name {
+  font-weight: 600;
+  font-size: 1rem;
+  color: var(--text-primary);
+}
+
+.pair-stats {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.75rem;
+  margin-bottom: 0.75rem;
+}
+
+.pair-stat {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.pair-stat .stat-label {
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+}
+
+.pair-stat .stat-value {
+  font-size: 0.95rem;
+  font-weight: 500;
+  color: var(--text-primary);
+}
+
+.pair-stat .stat-value.high {
+  color: #28a745;
+}
+
+.pair-stat .stat-value.medium {
+  color: #ffc107;
+}
+
+.pair-stat .stat-value.low {
+  color: #dc3545;
+}
+
+.correlation-bar-container {
+  height: 8px;
+  background: var(--bg-secondary);
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.correlation-bar {
+  height: 100%;
+  border-radius: 4px;
+  transition: all 0.3s ease;
+}
+
+@media (max-width: 768px) {
+  .correlation-summary {
+    flex-direction: column;
+    gap: 1rem;
+  }
+
+  .correlation-pairs {
+    grid-template-columns: 1fr;
+  }
+
+  .pair-stats {
+    grid-template-columns: 1fr;
+  }
+}

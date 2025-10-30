@@ -13,6 +13,8 @@ import { TradeTab } from './components/TradeTab'
 import { SettingsTab } from './components/SettingsTab'
 import { DebugTab } from './components/DebugTab'
 import { LendingOracleTab } from './components/LendingOracleTab'
+import { CorrelationEngine } from './services/correlation-engine'
+import type { CorrelationMatrix } from './types/correlation'
 import './App.css'
 
 type TabType = 'price' | 'lending' | 'api' | 'trade' | 'settings' | 'debug';
@@ -40,6 +42,10 @@ function App() {
   const gateioMonitorRef = useRef<GateioPriceMonitor | null>(null)
   const kucoinMonitorRef = useRef<KucoinPriceMonitor | null>(null)
   const bingxMonitorRef = useRef<BingXPriceMonitor | null>(null)
+
+  // Phase 2A: Correlation Engine
+  const [correlationMatrix, setCorrelationMatrix] = useState<CorrelationMatrix | null>(null)
+  const correlationEngineRef = useRef(new CorrelationEngine())
 
   // WebSocket management state for Trade Tab
   const [tradeMonitoringActive, setTradeMonitoringActive] = useState(false)
@@ -249,6 +255,76 @@ function App() {
     stoppedWebSocketsRef.current = stopped
   }, [tradeMonitoringActive, activeExchanges])
 
+  // Phase 2A: Periodic correlation calculation (every 30 seconds)
+  useEffect(() => {
+    const calculateCorrelation = () => {
+      const exchanges = new Map<string, { priceHistory: any; volumeStats?: any; lastUpdate: number }>();
+
+      if (binanceData?.priceHistory) {
+        exchanges.set('Binance', {
+          priceHistory: binanceData.priceHistory,
+          volumeStats: binanceData.volumeStats,
+          lastUpdate: binanceData.lastUpdate,
+        });
+      }
+      if (mexcData?.priceHistory) {
+        exchanges.set('MEXC', {
+          priceHistory: mexcData.priceHistory,
+          volumeStats: mexcData.volumeStats,
+          lastUpdate: mexcData.lastUpdate,
+        });
+      }
+      if (bybitData?.priceHistory) {
+        exchanges.set('Bybit', {
+          priceHistory: bybitData.priceHistory,
+          volumeStats: bybitData.volumeStats,
+          lastUpdate: bybitData.lastUpdate,
+        });
+      }
+      if (gateioData?.priceHistory) {
+        exchanges.set('Gate.io', {
+          priceHistory: gateioData.priceHistory,
+          volumeStats: gateioData.volumeStats,
+          lastUpdate: gateioData.lastUpdate,
+        });
+      }
+      if (kucoinData?.priceHistory) {
+        exchanges.set('Kucoin', {
+          priceHistory: kucoinData.priceHistory,
+          volumeStats: kucoinData.volumeStats,
+          lastUpdate: kucoinData.lastUpdate,
+        });
+      }
+      if (bingxData?.priceHistory) {
+        exchanges.set('BingX', {
+          priceHistory: bingxData.priceHistory,
+          volumeStats: bingxData.volumeStats,
+          lastUpdate: bingxData.lastUpdate,
+        });
+      }
+
+      // 最低2取引所のデータが必要
+      if (exchanges.size >= 2) {
+        console.log('[App] Starting Phase 2A correlation calculation...');
+        const matrix = correlationEngineRef.current.calculateCorrelationMatrix(exchanges);
+        setCorrelationMatrix(matrix);
+      } else {
+        console.log(`[App] Skipping correlation calculation (only ${exchanges.size}/2 exchanges ready)`);
+      }
+    };
+
+    // 初回実行（30秒後）
+    const initialTimer = setTimeout(calculateCorrelation, 30000);
+
+    // 定期実行（30秒ごと）
+    const intervalTimer = setInterval(calculateCorrelation, 30000);
+
+    return () => {
+      clearTimeout(initialTimer);
+      clearInterval(intervalTimer);
+    };
+  }, [binanceData, mexcData, bybitData, gateioData, kucoinData, bingxData]);
+
   return (
     <div className="app">
       <header className="header">
@@ -332,6 +408,7 @@ function App() {
             gateioData={gateioData}
             kucoinData={kucoinData}
             bingxData={bingxData}
+            correlationMatrix={correlationMatrix}
           />
         )}
         {activeTab === 'api' && <ApiTab />}
